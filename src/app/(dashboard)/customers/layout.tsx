@@ -17,16 +17,16 @@ export default function CustomersLayout({ children }: { children: React.ReactNod
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
-    } catch {}
+    // Server state is the source of truth — sessionStorage is intentionally
+    // not consulted on mount (a stale client flag could bypass the pinpad
+    // after a server-side reset).
     setChecked(true);
-    // Lock on navigation away — both client gate (sessionStorage) AND
-    // server-side scope. Without the server lock, a customer with brief
-    // tablet access could re-enter /customers within the 5-min window
-    // and the server would still accept admin actions.
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      // Lock on navigation away — both client gate (sessionStorage) AND
+      // server-side scope. Without the server lock, a customer with brief
+      // tablet access could re-enter /customers within the 5-min window
+      // and the server would still accept admin actions.
       void lockPin("customers");
     };
   }, []);

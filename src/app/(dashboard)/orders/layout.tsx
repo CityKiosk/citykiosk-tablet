@@ -17,9 +17,9 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
-    } catch {}
+    // Server state is the source of truth — sessionStorage is intentionally
+    // not consulted on mount (a stale client flag could bypass the pinpad
+    // after a server-side reset).
     setChecked(true);
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}

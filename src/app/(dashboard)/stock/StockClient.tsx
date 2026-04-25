@@ -35,13 +35,13 @@ export function StockClient({ products: initialProducts, categories }: Props) {
   const [unlocked, setUnlocked] = useState(false);
 
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
-    } catch {}
-    // Lock the page the moment the owner navigates away (component unmounts).
-    // A shared tablet must not stay unlocked behind the owner's back.
+    // Server state is the source of truth — sessionStorage is intentionally
+    // not consulted on mount (a stale client flag could bypass the pinpad
+    // after a server-side reset).
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      // Lock the page the moment the owner navigates away.
+      // A shared tablet must not stay unlocked behind the owner's back.
       void lockPin("stock");
     };
   }, []);

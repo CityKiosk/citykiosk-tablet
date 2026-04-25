@@ -37,13 +37,16 @@ export default function SettingsPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [showPinChange, setShowPinChange] = useState(false);
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
-    } catch {}
-    // Lock on navigation away — don't leave /settings unlocked when the
-    // owner hands the tablet to a customer.
+    // Server state is the source of truth. sessionStorage is intentionally
+    // NOT consulted on mount — it would let a stale client flag bypass the
+    // pinpad after a server-side reset (deploy, schema migration, idle
+    // lockPin from another tab). PinGate's own getPinStatus call decides
+    // whether to render setupNew vs unlock; we keep `unlocked` local to
+    // this layout and flip it via onUnlocked only.
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      // Lock on navigation away — don't leave /settings unlocked when the
+      // owner hands the tablet to a customer.
       void lockPin("settings");
     };
   }, []);
