@@ -76,6 +76,12 @@ type LocaleDict = {
     added: string;
     deleteConfirm: (n: string) => string;
     deleted: string;
+    /** "+ Yeni Kategori" — inline picker trigger inside ProductForm */
+    quickAdd: string;
+    /** Placeholder for the inline DE-only input */
+    placeholder: string;
+    /** Generic "Kategorie konnte nicht gespeichert werden" fallback */
+    saveError: string;
   };
   add: {
     title: string;
@@ -360,6 +366,9 @@ export const dict: Record<Locale, LocaleDict> = {
       deleteConfirm: (n: string) =>
         `"${n}" kategorisini silmek istediğinize emin misiniz? Bu kategorideki özel ürünler kategorisiz kalır.`,
       deleted: "Kategori silindi",
+      quickAdd: "Yeni Kategori",
+      placeholder: "Kategori adı",
+      saveError: "Kategori kaydedilemedi",
     },
     add: {
       title: "Yeni Ürün",
@@ -647,6 +656,9 @@ export const dict: Record<Locale, LocaleDict> = {
       deleteConfirm: (n: string) =>
         `Möchten Sie die Kategorie "${n}" wirklich löschen? Eigene Produkte in dieser Kategorie verlieren ihre Zuordnung.`,
       deleted: "Kategorie gelöscht",
+      quickAdd: "Neue Kategorie",
+      placeholder: "Kategoriename",
+      saveError: "Kategorie konnte nicht gespeichert werden",
     },
     add: {
       title: "Neues Produkt",

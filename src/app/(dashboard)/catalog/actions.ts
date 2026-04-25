@@ -142,6 +142,71 @@ const AddCategorySchema = z.object({
   slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "Nur Kleinbuchstaben, Zahlen und Bindestriche"),
 });
 
+/** Slug helper — Latin-1 fold, lowercase, dash-collapse. Mirrors the
+ *  client-side rules used in AddCategoryDialog so DE inputs like
+ *  "Magnete für Kühlschrank" become "magnete-fur-kuhlschrank". */
+function slugifyForCategory(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+const QuickCategorySchema = z.object({
+  name_de: z.string().min(1, "Name erforderlich").max(100),
+});
+
+/**
+ * Single-input category create used by the inline picker inside ProductForm.
+ * Owner only types the German name; we mirror it into name_tr (DB requires
+ * NOT NULL there) so the locale fallback chain still works. Slug is derived
+ * from the input. Returns the new id so the caller can auto-select it in
+ * the dropdown without a roundtrip.
+ */
+export async function addCategoryQuick(nameDe: string): Promise<{ id?: string; error?: string }> {
+  const parsed = QuickCategorySchema.safeParse({ name_de: nameDe });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
+
+  const trimmed = parsed.data.name_de.trim();
+  let slug = slugifyForCategory(trimmed);
+  if (!slug) {
+    // Fallback for inputs that slugify to empty (pure non-Latin scripts) —
+    // give it a unique numeric tail so the (owner_id, slug) unique can land.
+    slug = `cat-${Date.now()}`;
+  }
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      name_tr: trimmed,
+      name_de: trimmed,
+      slug,
+      owner_id: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") return { error: "Kategorie existiert bereits / Kategori zaten var" };
+    return { error: "Fehler beim Erstellen" };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/catalog");
+  return { id: data.id };
+}
+
 export async function addCategory(
   _prev: { success?: boolean; error?: string },
   formData: FormData,

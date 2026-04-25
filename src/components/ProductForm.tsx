@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Modal from "./Modal";
 import { useI18n } from "./I18nProvider";
 import { resizeImageToBlob } from "@/lib/image";
@@ -12,6 +12,7 @@ import {
   type SettingsProduct,
 } from "@/app/(dashboard)/catalog/actions";
 import { createClient } from "@/lib/supabase/client";
+import CategoryCreateInline from "./CategoryCreateInline";
 
 type CommonProps = {
   categories: SettingsCategory[];
@@ -33,7 +34,16 @@ type EditProps = CommonProps & {
 
 export default function ProductForm(props: AddProps | EditProps) {
   const { t, locale } = useI18n();
-  const { categories, existingDimensions = [], onClose, onSaved } = props;
+  const { categories: propCategories, existingDimensions = [], onClose, onSaved } = props;
+
+  // Local categories list — lets the inline create row append the freshly
+  // created category without waiting for a parent refetch + prop reflow.
+  // Synced down whenever the parent passes a new array (e.g. after the
+  // settings page reloads its data).
+  const [categories, setCategories] = useState<SettingsCategory[]>(propCategories);
+  useEffect(() => {
+    setCategories(propCategories);
+  }, [propCategories]);
   const initial = props.mode === "edit" ? props.initial : undefined;
   const prev = props.mode === "edit" ? props.prev ?? null : null;
   const next = props.mode === "edit" ? props.next ?? null : null;
@@ -362,6 +372,26 @@ export default function ProductForm(props: AddProps | EditProps) {
               </option>
             ))}
           </select>
+          <CategoryCreateInline
+            disabled={isPending}
+            onCreated={(newId, name) => {
+              // Optimistic append — we already have id + name from the
+              // server response; pad with the fields we don't display in
+              // the dropdown so the type stays satisfied.
+              setCategories((prev) => [
+                ...prev,
+                {
+                  id: newId,
+                  name_tr: name,
+                  name_de: name,
+                  slug: "",
+                  sort_order: prev.length,
+                  is_active: true,
+                },
+              ]);
+              setCategoryId(newId);
+            }}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t.add.price} required htmlFor="pf-price">
