@@ -430,6 +430,9 @@ export type Database = {
         Args: { p_current_pin: string | null; p_new_pin: string }
         Returns: boolean
       }
+      is_admin_pin_unlocked: { Args: never; Returns: boolean }
+      extend_admin_pin_unlock: { Args: never; Returns: void }
+      lock_admin_pin: { Args: never; Returns: void }
       update_display_field: {
         Args: { p_scope: string; p_key: string; p_value: boolean }
         Returns: void
