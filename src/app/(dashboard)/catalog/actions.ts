@@ -8,11 +8,9 @@ import { z } from "zod";
 // ── Update Product ──
 const UpdateProductSchema = z.object({
   id: z.string().uuid(),
-  name_tr: z.string().min(1, "Name (TR) erforderlich"),
-  name_de: z.string().optional(),
+  name_de: z.string().min(1, "Name erforderlich"),
   price: z.coerce.number().min(0, "Preis muss ≥ 0 sein"),
   category_id: z.string().uuid().optional().nullable(),
-  description_tr: z.string().optional(),
   description_de: z.string().optional(),
   image_url: z.string().transform((val) => val.trim()).refine(
     (val) => {
@@ -40,11 +38,9 @@ export async function updateProduct(
   const stockRaw = formData.get("stock");
   const parsed = UpdateProductSchema.safeParse({
     id: formData.get("id"),
-    name_tr: formData.get("name_tr"),
-    name_de: formData.get("name_de") || undefined,
+    name_de: formData.get("name_de"),
     price: formData.get("price"),
     category_id: formData.get("category_id") || null,
-    description_tr: formData.get("description_tr") || undefined,
     description_de: formData.get("description_de") || undefined,
     image_url: formData.get("image_url") || undefined,
     sku: formData.get("sku") || null,
@@ -59,19 +55,17 @@ export async function updateProduct(
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Nicht angemeldet / Giriş yapılmamış" };
+  if (!user) return { error: "Nicht angemeldet" };
 
   const gate = await requirePinUnlocked("settings");
-  if (gate) return { error: "PIN erforderlich / PIN gerekli" };
+  if (gate) return { error: "PIN erforderlich" };
 
   const { error } = await supabase
     .from("products")
     .update({
-      name_tr: parsed.data.name_tr,
-      name_de: parsed.data.name_de || null,
+      name_de: parsed.data.name_de,
       price: parsed.data.price,
       category_id: parsed.data.category_id,
-      description_tr: parsed.data.description_tr || null,
       description_de: parsed.data.description_de || null,
       ...(parsed.data.image_url !== undefined ? { image_url: parsed.data.image_url } : {}),
       sku: parsed.data.sku || null,
@@ -83,7 +77,7 @@ export async function updateProduct(
     .eq("owner_id", user.id);
 
   if (error) {
-    return { error: "Speichern fehlgeschlagen / Kaydetme başarısız" };
+    return { error: "Speichern fehlgeschlagen" };
   }
 
   revalidatePath("/catalog");
@@ -129,7 +123,7 @@ export async function deleteProduct(productId: string): Promise<{ error?: string
     .eq("id", productId)
     .eq("owner_id", user.id);
 
-  if (error) return { error: "Löschen fehlgeschlagen / Silme başarısız" };
+  if (error) return { error: "Löschen fehlgeschlagen" };
 
   revalidatePath("/catalog");
   return {};
@@ -137,8 +131,7 @@ export async function deleteProduct(productId: string): Promise<{ error?: string
 
 // ── Add Category ──
 const AddCategorySchema = z.object({
-  name_tr: z.string().min(1),
-  name_de: z.string().optional(),
+  name_de: z.string().min(1, "Name erforderlich"),
   slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "Nur Kleinbuchstaben, Zahlen und Bindestriche"),
 });
 
@@ -160,10 +153,8 @@ const QuickCategorySchema = z.object({
 
 /**
  * Single-input category create used by the inline picker inside ProductForm.
- * Owner only types the German name; we mirror it into name_tr (DB requires
- * NOT NULL there) so the locale fallback chain still works. Slug is derived
- * from the input. Returns the new id so the caller can auto-select it in
- * the dropdown without a roundtrip.
+ * Slug is derived from the input. Returns the new id so the caller can
+ * auto-select it in the dropdown without a roundtrip.
  */
 export async function addCategoryQuick(nameDe: string): Promise<{ id?: string; error?: string }> {
   const parsed = QuickCategorySchema.safeParse({ name_de: nameDe });
@@ -189,7 +180,6 @@ export async function addCategoryQuick(nameDe: string): Promise<{ id?: string; e
   const { data, error } = await supabase
     .from("categories")
     .insert({
-      name_tr: trimmed,
       name_de: trimmed,
       slug,
       owner_id: user.id,
@@ -198,7 +188,7 @@ export async function addCategoryQuick(nameDe: string): Promise<{ id?: string; e
     .single();
 
   if (error) {
-    if (error.code === "23505") return { error: "Kategorie existiert bereits / Kategori zaten var" };
+    if (error.code === "23505") return { error: "Kategorie existiert bereits" };
     return { error: "Fehler beim Erstellen" };
   }
 
@@ -212,8 +202,7 @@ export async function addCategory(
   formData: FormData,
 ) {
   const parsed = AddCategorySchema.safeParse({
-    name_tr: formData.get("name_tr"),
-    name_de: formData.get("name_de") || undefined,
+    name_de: formData.get("name_de"),
     slug: formData.get("slug"),
   });
 
@@ -229,15 +218,14 @@ export async function addCategory(
   if (gate) return { error: "PIN erforderlich" };
 
   const { error } = await supabase.from("categories").insert({
-    name_tr: parsed.data.name_tr,
-    name_de: parsed.data.name_de || null,
+    name_de: parsed.data.name_de,
     slug: parsed.data.slug,
     owner_id: user.id,
   });
 
   if (error) {
-    if (error.code === "23505") return { error: "Kategorie existiert bereits / Kategori zaten var" };
-    return { error: "Fehler beim Erstellen / Oluşturma hatası" };
+    if (error.code === "23505") return { error: "Kategorie existiert bereits" };
+    return { error: "Fehler beim Erstellen" };
   }
 
   revalidatePath("/catalog");
@@ -247,21 +235,18 @@ export async function addCategory(
 // ── Fetch products + categories for CartSheet ──
 export type CartProduct = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   price: number;
   image_url: string | null;
   category_id: string | null;
   sku: string | null;
-  description_tr: string | null;
   description_de: string | null;
   stock: number;
 };
 
 export type CartCategory = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
 };
 
 export async function fetchCartProducts(): Promise<{
@@ -276,12 +261,12 @@ export async function fetchCartProducts(): Promise<{
   const [prodRes, catRes] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name_tr, name_de, price, image_url, category_id, sku, description_tr, description_de, stock")
+      .select("id, name_de, price, image_url, category_id, sku, description_de, stock")
       .eq("is_active", true)
       .eq("owner_id", user.id),
     supabase
       .from("categories")
-      .select("id, name_tr, name_de")
+      .select("id, name_de")
       .eq("is_active", true)
       .eq("owner_id", user.id),
   ]);
@@ -293,8 +278,7 @@ export async function fetchCartProducts(): Promise<{
 // ── Fetch categories for Settings ──
 export type SettingsCategory = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   slug: string;
   sort_order: number;
   is_active: boolean;
@@ -307,7 +291,7 @@ export async function fetchCategories(): Promise<{ data?: SettingsCategory[]; er
 
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name_tr, name_de, slug, sort_order, is_active")
+    .select("id, name_de, slug, sort_order, is_active")
     .eq("owner_id", user.id)
     .order("name_de", { ascending: true });
 
@@ -353,14 +337,12 @@ export async function deleteCategory(categoryId: string): Promise<{ error?: stri
 // ── Fetch products for Settings ──
 export type SettingsProduct = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   price: number;
   image_url: string | null;
   category_id: string | null;
   dimensions: string | null;
   packaging_unit: number | null;
-  description_tr: string | null;
   description_de: string | null;
   sku: string | null;
   is_active: boolean;
@@ -375,7 +357,7 @@ export async function fetchProducts(): Promise<{ data?: SettingsProduct[]; error
 
   const { data, error } = await supabase
     .from("products")
-    .select("id, name_tr, name_de, price, image_url, category_id, dimensions, packaging_unit, description_tr, description_de, sku, is_active, sort_order, stock")
+    .select("id, name_de, price, image_url, category_id, dimensions, packaging_unit, description_de, sku, is_active, sort_order, stock")
     .eq("owner_id", user.id)
     .order("sort_order", { ascending: true });
 
@@ -385,11 +367,9 @@ export async function fetchProducts(): Promise<{ data?: SettingsProduct[]; error
 
 // ── Add Product ──
 const AddProductSchema = z.object({
-  name_tr: z.string().min(1, "Name (TR) erforderlich"),
-  name_de: z.string().optional(),
+  name_de: z.string().min(1, "Name erforderlich"),
   price: z.coerce.number().min(0, "Preis muss ≥ 0 sein"),
   category_id: z.string().uuid().optional().nullable(),
-  description_tr: z.string().optional(),
   description_de: z.string().optional(),
   image_url: z.string().transform((val) => val.trim()).refine(
     (val) => {
@@ -405,11 +385,9 @@ const AddProductSchema = z.object({
 });
 
 export async function addProduct(input: {
-  name_tr: string;
-  name_de?: string;
+  name_de: string;
   price: number;
   category_id?: string | null;
-  description_tr?: string;
   description_de?: string;
   image_url?: string | null;
   dimensions?: string | null;
@@ -431,11 +409,9 @@ export async function addProduct(input: {
     .from("products")
     .insert({
       owner_id: user.id,
-      name_tr: parsed.data.name_tr,
-      name_de: parsed.data.name_de || null,
+      name_de: parsed.data.name_de,
       price: parsed.data.price,
       category_id: parsed.data.category_id || null,
-      description_tr: parsed.data.description_tr || null,
       description_de: parsed.data.description_de || null,
       image_url: parsed.data.image_url || null,
       dimensions: parsed.data.dimensions || null,

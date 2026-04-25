@@ -289,296 +289,6 @@ type LocaleDict = {
 };
 
 export const dict: Record<Locale, LocaleDict> = {
-  tr: {
-    appName: "Souvenirs Berlin",
-    nav: {
-      catalog: "Katalog",
-      orders: "Siparişler",
-      dashboard: "Panel",
-      customers: "Müşteriler",
-      settings: "Ayarlar",
-      stock: "Stok",
-      stockBadge: (n: number) => `${n} ürünün stoğu düşük`,
-      home: "Ana sayfa",
-      main: "Ana navigasyon",
-      skip: "İçeriğe geç",
-      tagline: "Toptan",
-      browse: "Vitrin",
-    },
-    catalog: {
-      title: "Katalog",
-      subtitle: "Ürünleri ara, sepete ekle ve sipariş oluştur.",
-      searchLabel: "Ürün ara",
-      searchPlaceholder: "Ürün adı veya kod ara…",
-      addProduct: "Ürün Ekle",
-      all: "Tümü",
-      categoryFilter: "Kategori filtresi",
-      empty: "Aramanızla eşleşen ürün bulunamadı.",
-      clearFilters: "Filtreleri temizle",
-      customBadge: "Özel",
-      deleteProduct: "Ürünü sil",
-      deleteConfirm: (n: string) => `"${n}" ürününü silmek istediğinize emin misiniz?`,
-      productDeleted: "Ürün silindi",
-      productAdded: "Ürün eklendi",
-      detailAria: (n: string) => `${n} detayını gör`,
-      qtyMinus: (n: string) => `${n} adetini azalt`,
-      qtyPlus: (n: string) => `${n} adetini arttır`,
-      qty: (n: string) => `${n} adeti`,
-      cartCount: (n: number, kinds: number) => `${n} ürün (${kinds} çeşit)`,
-      cartTotal: "Toplam",
-      createOrder: "Sipariş Oluştur",
-      cartLive: (n: number, t: string) => `Sepette ${n} ürün, toplam ${t}`,
-      cartEmpty: "Sepet boş",
-      cartView: "Sepeti gör",
-      cartTitle: "Seçilen Ürünler",
-      cartHint: "Adetleri buradan da düzenleyebilirsiniz",
-      cartClose: "Sepeti kapat",
-      backToTop: "Başa dön",
-      addCategory: "Kategori Ekle",
-      editMode: "Düzenle",
-      editModeDone: "Bitti",
-      editProduct: "Ürünü Düzenle",
-      resetOverride: "Sıfırla",
-      resetOverrideConfirm: "Bu ürünün değişikliklerini geri almak istediğinize emin misiniz?",
-      productUpdated: "Ürün güncellendi",
-      hiddenBadge: "Gizli",
-      restoreProduct: "Geri getir",
-      productRestored: "Ürün geri getirildi",
-      deleteAriaCat: (n) => `${n} kategorisini sil`,
-      undo: "Geri al",
-      sortLabel: "Sırala",
-      sortName: "İsim",
-      sortPriceAsc: "Fiyat ↑",
-      sortPriceDesc: "Fiyat ↓",
-      resultCount: (n: number) => `${n} ürün`,
-      addToCart: "Sepete ekle",
-      showMore: "Daha fazla",
-      showLess: "Daha az",
-    },
-    addCategory: {
-      title: "Yeni Kategori",
-      nameLabel: "Kategori Adı",
-      nameHint: "Bu ad hem Türkçe hem Almanca olarak kullanılır",
-      save: "Kategoriyi Kaydet",
-      nameRequired: "Kategori adı zorunlu",
-      duplicate: "Bu adda bir kategori zaten var",
-      added: "Kategori eklendi",
-      deleteConfirm: (n: string) =>
-        `"${n}" kategorisini silmek istediğinize emin misiniz? Bu kategorideki özel ürünler kategorisiz kalır.`,
-      deleted: "Kategori silindi",
-      quickAdd: "Yeni Kategori",
-      placeholder: "Kategori adı",
-      saveError: "Kategori kaydedilemedi",
-    },
-    add: {
-      title: "Yeni Ürün",
-      name: "Ürün Adı",
-      desc: "Açıklama",
-      photo: "Fotoğraf",
-      camera: "Fotoğraf Çek",
-      gallery: "Galeriden Seç",
-      removePhoto: "Fotoğrafı kaldır",
-      previewAlt: "Yüklenen fotoğraf önizlemesi",
-      category: "Kategori",
-      price: "Fiyat (€)",
-      save: "Kaydet",
-      validationErr: "Lütfen tüm alanları doldurun (fiyat 0'dan büyük olmalı)",
-      photoErr: "Fotoğraf yüklenemedi",
-    },
-    order: {
-      title: "Sipariş Oluştur",
-      modeLabel: "Müşteri tipi",
-      existing: "Mevcut Müşteri",
-      new: "Yeni Müşteri",
-      selectCustomer: "Müşteri seç",
-      authorizedName: "Yetkili adı",
-      shopName: "Dükkan adı",
-      summary: "Sipariş Özeti",
-      total: "Toplam",
-      confirm: "Siparişi Onayla",
-      reqErr: "Yetkili adı ve dükkan adı zorunlu",
-      pickErr: "Lütfen bir müşteri seçin",
-      saved: "Sipariş kaydedildi",
-    },
-    orders: {
-      title: (n: number) => `Siparişler (${n})`,
-      listTitle: "Siparişler",
-      searchPlaceholder: "Müşteri veya dükkan ara…",
-      searchLabel: "Sipariş ara",
-      empty: "Henüz sipariş yok",
-      emptyHint: "Katalogdan ürün seçip ilk siparişinizi oluşturun.",
-      goCatalog: "Kataloğa Git",
-      noMatch: "Aramanızla eşleşen sipariş bulunamadı.",
-      delete: "Siparişi sil",
-      deleteConfirm: (s: string) => `${s} siparişini silmek istediğinize emin misiniz?`,
-      deleted: "Sipariş silindi",
-      exportPdf: "PDF",
-      columns: {
-        shop: "Dükkan",
-        customer: "Müşteri",
-        items: "Ürün",
-        total: "Toplam",
-        date: "Tarih",
-        actions: "İşlemler",
-      },
-      itemsCount: (n: number) => `${n} ürün`,
-      view: "Görüntüle",
-      backToList: "← Tüm siparişler",
-      notFound: "Sipariş bulunamadı",
-      detailTitle: "Sipariş Detayı",
-      lineUnit: "Birim",
-      lineQty: "Adet",
-      lineSubtotal: "Ara toplam",
-    },
-    product: {
-      artNr: "Art-Nr",
-      pack: (n: number) => `Paket ${n} adet`,
-      required: "*",
-      dimensions: "Ölçü",
-    },
-    browse: {
-      page: (c: number, t: number) => `Sayfa ${c} / ${t}`,
-      back: "Geri",
-      next: "İleri",
-      noProducts: "Henüz ürün yok",
-      addingSoon: "Ürünler yakında eklenecek",
-    },
-    add2: {
-      dimensions: "Ölçü",
-      dimCustom: "Kendi ölçüsü…",
-      dimPlaceholder: "örn. 85 mm x 55 mm",
-      skuPlaceholder: "örn. 130022",
-      rotateSuccess: "✓ Döndürüldü",
-      saveAndNext: "Kaydet ve Sıradaki",
-      prevItem: (name) => `Önceki: ${name}`,
-      nextItem: (name) => `Sonraki: ${name}`,
-      itemPosition: (cur, total) => `${cur} / ${total}`,
-      discardChanges: "Değişiklikler kaydedilmedi. Yine de geçmek istiyor musunuz?",
-    },
-    common: { close: "Kapat", cancel: "İptal", confirm: "Onayla", save: "Kaydet", delete: "Sil", loading: "Yükleniyor…" },
-    dashboard: {
-      title: "Panel",
-      welcome: "Hoş geldin",
-      welcomeBack: (name: string) => `Tekrar hoş geldin, ${name}`,
-      statOrders: "Toplam Sipariş",
-      statRevenue: "Toplam Ciro",
-      statProducts: "Ürün Sayısı",
-      statCustomers: "Müşteri",
-      recentOrders: "Son Siparişler",
-      viewAll: "Tümünü gör",
-      quickActions: "Hızlı İşlemler",
-      actionNewOrder: "Sipariş Oluştur",
-      actionNewOrderDesc: "Katalogdan ürün seç ve sipariş hazırla",
-      actionAddProduct: "Ürün Ekle",
-      actionAddProductDesc: "Yeni ürün veya kategori tanımla",
-      actionAddCustomer: "Müşteri Ekle",
-      actionAddCustomerDesc: "Yeni dükkan veya yetkili kaydet",
-      emptyOrders: "Henüz sipariş yok",
-      monthRevenue: "Bu Ay",
-    },
-    customers: {
-      title: "Müşteriler",
-      subtitle: "Kayıtlı dükkan ve yetkililer.",
-      empty: "Henüz müşteri yok",
-      emptyHint: "İlk siparişi oluştururken müşteri eklenecek.",
-      columns: { name: "Yetkili", shop: "Dükkan", orders: "Sipariş", lastOrder: "Son Sipariş" },
-      never: "—",
-      new: "Yeni Müşteri",
-    },
-    settings: {
-      title: "Ayarlar",
-      subtitle: "Kategorileri, ürünleri ve veriyi yönet.",
-      tabs: { categories: "Kategoriler", products: "Ürünler", data: "Veri", display: "Görünüm" },
-      categoriesHeading: "Özel Kategoriler",
-      customCategoriesEmpty: "Henüz özel kategori yok.",
-      seedCategories: "Hazır Kategoriler",
-      productsHeading: "Özel Ürünler",
-      customProductsEmpty: "Henüz özel ürün yok.",
-      overridesHeading: "Düzenlenmiş Ürünler",
-      dataHeading: "Veri Yönetimi",
-      storageUsage: "Depolama kullanımı",
-      exportData: "Veriyi Dışa Aktar",
-      exportDesc: "Tüm müşteri, sipariş ve ürün verisini JSON olarak indir.",
-      clearData: "Tüm Veriyi Sil",
-      clearDesc: "localStorage tamamen temizlenir. Bu işlem geri alınamaz.",
-      clearConfirm: "Tüm veriler kalıcı olarak silinecek. Emin misiniz?",
-      cleared: "Tüm veri silindi",
-      display: {
-        heading: "Ürün Alanları",
-        hint: "Katalog ve vitrinde gösterilecek alanları seçin.",
-        name: "Ürün Adı",
-        description: "Açıklama",
-        sku: "Art.-Nr.",
-        dimensions: "Ölçü",
-        price: "Fiyat",
-        packagingUnit: "Paket",
-        alwaysOn: "Her zaman görünür",
-        crossDeviceHint: "Bu ayarlar tüm cihazlarınızda ve paylaşım linklerinizde geçerlidir.",
-        refreshHint: "Açık paylaşım linklerinde yeni ayarın görünmesi için müşterinin sayfayı yenilemesi gerekir.",
-        saveError: "Değişiklik kaydedilmedi, tekrar deneyin.",
-        catalogSection: "Katalog",
-        catalogHint: "Sizin sipariş oluştururken gördüğünüz kataloğun alanları.",
-        browseSection: "Vitrin",
-        browseHint: "Müşteriye gösterilen vitrin ve paylaşım linkinin alanları.",
-      },
-    },
-    confirm: {
-      title: "Emin misiniz?",
-      cancel: "Vazgeç",
-      confirm: "Sil",
-    },
-    stock: {
-      title: "Stok",
-      subtitle: "Ürün stoğunuzu takip edin. Sipariş verildikçe otomatik düşer.",
-      searchPlaceholder: "Ürün ara…",
-      allCategories: "Tüm kategoriler",
-      sortLowFirst: "Düşük stok önce",
-      sortAZ: "A → Z",
-      noProducts: "Arama kriterlerinize uyan ürün bulunamadı.",
-      saving: "Kaydediliyor…",
-      saved: "Kaydedildi",
-      saveFailed: "Kaydedilemedi",
-      retry: "Yeniden dene",
-      negativeWarning: "Satış sayımdan fazla",
-      decrement: (n: string) => `${n} stoğunu azalt`,
-      increment: (n: string) => `${n} stoğunu artır`,
-      valueLabel: (n: string) => `${n} için stok miktarı`,
-      undo: "Geri al",
-      undone: "Geri alındı",
-      invalidValue: "Geçersiz değer",
-      lowStockHint: (n: number) => `${n} ürünün stoğu düşük (≤5)`,
-      unit: "adet",
-      productCount: (n: number) => `${n} ürün`,
-    },
-    pin: {
-      unlockTitleSettings: "PIN gerekli",
-      unlockTitleStock: "PIN gerekli",
-      unlockTitleOrders: "PIN gerekli",
-      unlockSubtitle: "6 haneli PIN'inizi girin.",
-      setupTitle: "PIN oluştur",
-      setupSubtitle: "Ayarları ve stoğu korumak için 6 haneli bir PIN belirleyin.",
-      enterCurrent: "Mevcut PIN",
-      enterNew: "Yeni PIN",
-      enterConfirm: "Yeni PIN'i doğrula",
-      incorrect: "Yanlış PIN",
-      mismatch: "PIN'ler eşleşmiyor",
-      tooManyAttempts: "Çok fazla deneme. Lütfen bekleyin.",
-      saved: "PIN kaydedildi",
-      saveError: "Kaydedilemedi",
-      verifying: "Kontrol ediliyor…",
-      saving: "Kaydediliyor…",
-      cancel: "Vazgeç",
-      backspace: "Sil",
-      digit: (n: number) => `${n} rakamı`,
-      dotsProgress: (filled: number, total: number) => `${filled} / ${total} hane girildi`,
-      changeSection: "PIN değiştir",
-      changeDesc: "Ayarlar ve stok sayfalarını açarken kullandığın PIN'i güncelle.",
-      changeButton: "PIN'i değiştir",
-      loadError: "PIN durumu yüklenemedi.",
-      retry: "Tekrar dene",
-      back: "Geri",
-    },
-  },
   de: {
     appName: "Souvenirs Berlin",
     nav: {
@@ -873,38 +583,37 @@ export const dict: Record<Locale, LocaleDict> = {
 
 export type Dict = LocaleDict;
 
-export function getCategoryName(c: Category, locale: Locale): string {
-  return locale === "de" ? c.nameDe : c.nameTr;
+// Locale param kept for callsite compatibility; always "de".
+export function getCategoryName(c: Category, _locale?: Locale): string {
+  return c.nameDe;
 }
 
-export function getProductName(p: Product, cat: Category | undefined, locale: Locale): string {
+export function getProductName(p: Product, cat: Category | undefined, _locale?: Locale): string {
   if (p.customName) return p.customName;
-  const catName = cat ? getCategoryName(cat, locale) : "";
+  const catName = cat ? getCategoryName(cat) : "";
   return `${catName} ${p.id}`.trim();
 }
 
-export function getProductDescription(p: Product, locale: Locale): string {
+export function getProductDescription(p: Product, _locale?: Locale): string {
   if (p.customDescription) return p.customDescription;
-  const t = dict[locale].product;
+  const t = dict.de.product;
   const parts = [`${t.artNr} ${p.id}`];
   if (p.dim) parts.push(p.dim);
   if (p.ve) parts.push(t.pack(p.ve));
   return parts.join(" — ");
 }
 
-export function formatPrice(value: number, locale: Locale): string {
-  const tag = locale === "de" ? "de-DE" : "tr-TR";
-  const num = value.toLocaleString(tag, {
+export function formatPrice(value: number, _locale?: Locale): string {
+  const num = value.toLocaleString("de-DE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
   return `${num} €`;
 }
 
-export function formatDateTime(iso: string, locale: Locale): string {
+export function formatDateTime(iso: string, _locale?: Locale): string {
   const d = new Date(iso);
-  const tag = locale === "de" ? "de-DE" : "tr-TR";
-  return d.toLocaleString(tag, {
+  return d.toLocaleString("de-DE", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -913,8 +622,7 @@ export function formatDateTime(iso: string, locale: Locale): string {
   });
 }
 
-export function formatDate(iso: string, locale: Locale): string {
+export function formatDate(iso: string, _locale?: Locale): string {
   const d = new Date(iso);
-  const tag = locale === "de" ? "de-DE" : "tr-TR";
-  return d.toLocaleDateString(tag, { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }

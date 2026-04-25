@@ -32,31 +32,24 @@ const Flipbook = dynamic(() => import("@/components/Flipbook"), {
 type ServerCategory = {
   id: string;
   slug: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   sort_order: number;
 };
 
 type ServerProduct = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   price: number;
   image_url: string | null;
   category_id: string | null;
   dimensions: string | null;
   packaging_unit: number | null;
   sku: string | null;
-  description_tr: string | null;
   description_de: string | null;
   sort_order: number;
 };
 
 const PAGE_SIZE = 6;
-
-function getName(item: { name_tr: string; name_de: string | null }, locale: string): string {
-  return locale === "de" && item.name_de ? item.name_de : item.name_tr;
-}
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
@@ -65,9 +58,9 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 function BrowseCardImpl({ product, category: _category }: { product: Product; category?: Category }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { fields } = useDisplayFields("browse");
-  const name = getProductName(product, _category, locale);
+  const name = getProductName(product, _category);
   const showSku = fields.sku && !!product.sku;
   const showDimensions = fields.dimensions && !!product.dim;
   const showPackaging = fields.packagingUnit && !!product.ve;
@@ -105,7 +98,7 @@ function BrowseCardImpl({ product, category: _category }: { product: Product; ca
         )}
         {fields.price && (
           <span className="tabular text-sm font-semibold text-slate-900 dark:text-slate-50 block mt-0.5">
-            {formatPrice(product.price, locale)}
+            {formatPrice(product.price)}
           </span>
         )}
       </div>
@@ -122,8 +115,8 @@ const BrowseCard = memo(BrowseCardImpl, (a, b) =>
 );
 
 // Physical bookmark tab sticking out from page edge; side depends on page parity
-function CategoryBookmark({ category, locale, side }: { category: ServerCategory; locale: string; side: "left" | "right" }) {
-  const name = locale === "de" && category.name_de ? category.name_de : category.name_tr;
+function CategoryBookmark({ category, side }: { category: ServerCategory; side: "left" | "right" }) {
+  const name = category.name_de;
   const isRight = side === "right";
   return (
     <div
@@ -154,8 +147,8 @@ function CategoryBookmark({ category, locale, side }: { category: ServerCategory
 }
 
 // Magazine-style category cover page: big title + asymmetric image mosaic
-function CategoryCover({ category, sample, locale }: { category: ServerCategory; sample: ServerProduct[]; locale: string }) {
-  const name = locale === "de" && category.name_de ? category.name_de : category.name_tr;
+function CategoryCover({ category, sample }: { category: ServerCategory; sample: ServerProduct[] }) {
+  const name = category.name_de;
   const images = sample.slice(0, 5).map((p) => p.image_url).filter((u): u is string => !!u);
 
   return (
@@ -207,7 +200,7 @@ function CategoryCover({ category, sample, locale }: { category: ServerCategory;
   );
 }
 
-function PageGrid({ items, catById, locale }: { items: ServerProduct[]; catById: Map<string, ServerCategory>; locale: string }) {
+function PageGrid({ items, catById }: { items: ServerProduct[]; catById: Map<string, ServerCategory> }) {
   return (
     <div className="h-full grid grid-cols-2 grid-rows-3 gap-3">
       {items.map((p) => {
@@ -222,10 +215,10 @@ function PageGrid({ items, catById, locale }: { items: ServerProduct[]; catById:
               price: p.price,
               sku: p.sku || undefined,
               dim: p.dimensions || undefined,
-              description: (locale === "de" ? p.description_de : p.description_tr) || p.description_de || p.description_tr || undefined,
-              customName: getName(p, locale),
+              description: p.description_de || undefined,
+              customName: p.name_de,
             }}
-            category={cat ? { id: cat.id, nameTr: cat.name_tr, nameDe: cat.name_de || cat.name_tr } : undefined}
+            category={cat ? { id: cat.id, nameDe: cat.name_de } : undefined}
           />
         );
       })}
@@ -234,7 +227,7 @@ function PageGrid({ items, catById, locale }: { items: ServerProduct[]; catById:
 }
 
 export function BrowseCatalogClient({ categories, products }: { categories: ServerCategory[]; products: ServerProduct[] }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const [currentPage, setCurrentPage] = useState(0);
   const [sharing, setSharing] = useState(false);
@@ -250,7 +243,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
     | { kind: "grid"; items: ServerProduct[]; category?: ServerCategory };
 
   const pages = useMemo<PageItem[]>(() => {
-    const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
+    const collator = new Intl.Collator("de", { numeric: true, sensitivity: "base" });
 
     // Group products by category id
     const groups = new Map<string, ServerProduct[]>();
@@ -267,10 +260,8 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
 
     // Order categories by their display name
     const orderedCatIds = [...groups.keys()].sort((a, b) => {
-      const ca = catById.get(a);
-      const cb = catById.get(b);
-      const na = ca ? (locale === "de" && ca.name_de ? ca.name_de : ca.name_tr) : "";
-      const nb = cb ? (locale === "de" && cb.name_de ? cb.name_de : cb.name_tr) : "";
+      const na = catById.get(a)?.name_de ?? "";
+      const nb = catById.get(b)?.name_de ?? "";
       return collator.compare(na, nb);
     });
 
@@ -278,7 +269,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
     for (const catId of orderedCatIds) {
       const cat = catById.get(catId);
       if (!cat) continue;
-      const items = groups.get(catId)!.sort((a, b) => collator.compare(getName(a, locale), getName(b, locale)));
+      const items = groups.get(catId)!.sort((a, b) => collator.compare(a.name_de, b.name_de));
       // Cover page
       result.push({ kind: "cover", category: cat, sample: items });
       // Product pages
@@ -288,13 +279,13 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
     }
     // Uncategorized bucket at the end
     if (uncategorized.length > 0) {
-      const sorted = [...uncategorized].sort((a, b) => collator.compare(getName(a, locale), getName(b, locale)));
+      const sorted = [...uncategorized].sort((a, b) => collator.compare(a.name_de, b.name_de));
       for (const chunkItems of chunk(sorted, PAGE_SIZE)) {
         result.push({ kind: "grid", items: chunkItems });
       }
     }
     return result;
-  }, [products, locale, catById]);
+  }, [products, catById]);
 
   const totalPages = pages.length;
 
@@ -377,14 +368,13 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
                     isActive={idx === currentPage}
                   >
                     {page.kind === "cover" ? (
-                      <CategoryCover category={page.category} sample={page.sample} locale={locale} />
+                      <CategoryCover category={page.category} sample={page.sample} />
                     ) : (
                       <div className="relative h-full">
-                        <PageGrid items={page.items} catById={catById} locale={locale} />
+                        <PageGrid items={page.items} catById={catById} />
                         {page.category && (
                           <CategoryBookmark
                             category={page.category}
-                            locale={locale}
                             side={idx % 2 === 0 ? "left" : "right"}
                           />
                         )}

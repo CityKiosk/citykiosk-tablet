@@ -20,8 +20,7 @@ export type PendingOrder = {
     notes?: string;
     items: {
       product_id: string;
-      product_name_tr: string;
-      product_name_de: string | null;
+      product_name_de: string;
       product_image_url: string | null;
       product_sku?: string | null;
       product_description?: string | null;

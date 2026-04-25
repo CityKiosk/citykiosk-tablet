@@ -147,7 +147,7 @@ function StockRowInner({ product, categoryName, onPersist, onOpenDetail }: Props
     await commit(value, lastPersisted);
   }
 
-  const name = locale === "de" && product.name_de ? product.name_de : product.name_tr;
+  const name = product.name_de;
   const isNegative = value < 0;
   const isLow = value >= 0 && value <= 5;
   // Parsed draft (or null). Dirty = draft parses to something != last persisted.

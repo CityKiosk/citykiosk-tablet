@@ -18,13 +18,13 @@ export async function fetchStockProducts(): Promise<{
   const [prodRes, catRes] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name_tr, name_de, image_url, category_id, stock, sku, price, description_tr, description_de, dimensions, packaging_unit")
+      .select("id, name_de, image_url, category_id, stock, sku, price, description_de, dimensions, packaging_unit")
       .eq("owner_id", user.id)
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     supabase
       .from("categories")
-      .select("id, name_tr, name_de")
+      .select("id, name_de")
       .eq("owner_id", user.id)
       .eq("is_active", true)
       .order("name_de", { ascending: true }),

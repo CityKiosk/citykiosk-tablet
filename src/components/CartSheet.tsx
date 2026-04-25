@@ -10,16 +10,11 @@ import OrderDialog from "./OrderDialog";
 import {
   fetchCartProducts,
   type CartProduct,
-  type CartCategory,
 } from "@/app/(dashboard)/catalog/actions";
 import { lockBodyScroll } from "@/lib/scrollLock";
 
-function getName(item: { name_tr: string; name_de: string | null }, locale: string): string {
-  return locale === "de" && item.name_de ? item.name_de : item.name_tr;
-}
-
 export default function CartSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { quantities, setQty, clear, totalCount, kindCount } = useCart();
   const sheetRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -28,7 +23,6 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
   const [orderOpen, setOrderOpen] = useState(false);
 
   const [allProducts, setAllProducts] = useState<CartProduct[]>([]);
-  const [allCategories, setAllCategories] = useState<CartCategory[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -39,7 +33,6 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
     setLoaded(false);
     fetchCartProducts().then((res) => {
       if (res.products) setAllProducts(res.products);
-      if (res.categories) setAllCategories(res.categories);
       setLoaded(true);
     });
   }, [open]);
@@ -57,31 +50,25 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
     };
   }, [open, onClose]);
 
-  const catById = useMemo(() => new Map(allCategories.map((c) => [c.id, c] as const)), [allCategories]);
-
   const items = useMemo(() => {
     return Object.entries(quantities)
       .filter(([, q]) => q > 0)
       .map(([pid, q]) => {
         const p = allProducts.find((x) => x.id === pid);
         if (!p) return null;
-        const cat = p.category_id ? catById.get(p.category_id) : undefined;
-        const displayName = getName(p, locale);
-        const desc = (locale === "de" ? p.description_de : p.description_tr) || p.description_de || p.description_tr || undefined;
         return {
           productId: p.id,
-          productName: displayName,
-          productNameTr: p.name_tr,
+          productName: p.name_de,
           productNameDe: p.name_de,
           productImage: p.image_url || "",
           productSku: p.sku || undefined,
-          productDescription: desc,
+          productDescription: p.description_de ?? undefined,
           quantity: q,
           price: p.price,
         };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [quantities, allProducts, catById, locale]);
+  }, [quantities, allProducts]);
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -180,7 +167,7 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
                   onClick={onClose}
                   className="cursor-pointer inline-flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-medium text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors"
                 >
-                  ← {locale === "de" ? "Zum Katalog" : "Kataloğa dön"}
+                  ← Zum Katalog
                 </button>
               </div>
             ) : (
@@ -210,10 +197,10 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
                         <div className="text-[10px] text-slate-400 dark:text-slate-500">Art.-Nr. {i.productSku}</div>
                       )}
                       <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular">
-                        {formatPrice(i.price, locale)} × {i.quantity}
+                        {formatPrice(i.price)} × {i.quantity}
                       </div>
                       <div className="tabular text-sm font-semibold text-sky-700 dark:text-sky-400 mt-1">
-                        {formatPrice(i.price * i.quantity, locale)}
+                        {formatPrice(i.price * i.quantity)}
                       </div>
                     </div>
                     <QtyControl
@@ -236,7 +223,7 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
                     {t.catalog.cartTotal}
                   </div>
                   <div className="tabular text-xl font-semibold text-slate-900 dark:text-slate-50">
-                    {formatPrice(total, locale)}
+                    {formatPrice(total)}
                   </div>
                 </div>
                 <button

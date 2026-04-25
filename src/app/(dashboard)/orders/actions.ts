@@ -17,8 +17,7 @@ const safeImageUrl = z.string().refine(
 
 const OrderItemSchema = z.object({
   product_id: z.string().uuid(),
-  product_name_tr: z.string().min(1, "Produktname erforderlich").max(500),
-  product_name_de: z.string().max(500).nullable(),
+  product_name_de: z.string().min(1, "Produktname erforderlich").max(500),
   product_image_url: safeImageUrl,
   product_sku: z.string().max(100).nullable().optional(),
   product_description: z.string().max(2000).nullable().optional(),
@@ -53,8 +52,7 @@ export async function createOrder(input: {
   notes?: string;
   items: {
     product_id: string;
-    product_name_tr: string;
-    product_name_de: string | null;
+    product_name_de: string;
     product_image_url: string | null;
     product_sku?: string | null;
     product_description?: string | null;
@@ -182,7 +180,6 @@ export async function createOrder(input: {
     order_id: order.id,
     owner_id: user.id,
     product_id: item.product_id,
-    product_name_tr: item.product_name_tr,
     product_name_de: item.product_name_de,
     product_image_url: item.product_image_url,
     product_sku: item.product_sku || null,
@@ -288,8 +285,7 @@ export type OrderRow = {
 export type OrderItemRow = {
   id: string;
   product_id: string | null;
-  product_name_tr: string;
-  product_name_de: string | null;
+  product_name_de: string;
   product_image_url: string | null;
   product_sku: string | null;
   product_description: string | null;
@@ -314,7 +310,7 @@ export async function fetchOrders(): Promise<{ data?: OrderRow[]; error?: string
       customer_first_name, customer_last_name, customer_shop_name,
       status, total, notes, created_at,
       order_items (
-        id, product_id, product_name_tr, product_name_de, product_image_url,
+        id, product_id, product_name_de, product_image_url,
         product_sku, product_description, quantity, unit_price, line_total, sort_order
       )
     `)
@@ -347,7 +343,7 @@ export async function fetchOrderById(orderId: string): Promise<{ data?: OrderRow
       customer_first_name, customer_last_name, customer_shop_name,
       status, total, notes, created_at,
       order_items (
-        id, product_id, product_name_tr, product_name_de, product_image_url,
+        id, product_id, product_name_de, product_image_url,
         product_sku, product_description, quantity, unit_price, line_total, sort_order
       )
     `)

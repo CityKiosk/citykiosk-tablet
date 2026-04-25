@@ -25,22 +25,19 @@ const Flipbook = dynamic(() => import("@/components/Flipbook"), {
 type Category = {
   id: string;
   slug: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   sort_order: number;
 };
 
 type Product = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   price: number;
   image_url: string | null;
   category_id: string | null;
   dimensions: string | null;
   packaging_unit: number | null;
   sku: string | null;
-  description_tr: string | null;
   description_de: string | null;
   sort_order: number;
 };
@@ -56,10 +53,6 @@ type DisplayFields = {
 
 const PAGE_SIZE = 6;
 
-function getName(item: { name_tr: string; name_de: string | null }): string {
-  return item.name_de || item.name_tr;
-}
-
 function chunk<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
@@ -68,8 +61,8 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 // ── Card ──
 function CardImpl({ product, displayFields }: { product: Product; displayFields: DisplayFields }) {
-  const name = product.name_de || product.name_tr;
-  const description = product.description_de || product.description_tr;
+  const name = product.name_de;
+  const description = product.description_de;
   const showSku = displayFields.sku && !!product.sku;
   const showDimensions = displayFields.dimensions && !!product.dimensions;
   const showPackaging = displayFields.packagingUnit && !!product.packaging_unit;
@@ -109,7 +102,7 @@ function CardImpl({ product, displayFields }: { product: Product; displayFields:
         )}
         {displayFields.price && (
           <span className="tabular text-sm font-semibold text-slate-900 dark:text-slate-50 block mt-0.5">
-            {formatPrice(product.price, "de")}
+            {formatPrice(product.price)}
           </span>
         )}
       </div>
@@ -121,7 +114,7 @@ const Card = memo(CardImpl);
 
 // ── Category Cover ──
 function CoverPage({ category, sample }: { category: Category; sample: Product[] }) {
-  const name = getName(category);
+  const name = category.name_de;
   const images = sample.slice(0, 5).map((p) => p.image_url).filter((u): u is string => !!u);
 
   return (
@@ -172,7 +165,7 @@ function CoverPage({ category, sample }: { category: Category; sample: Product[]
 
 // ── Bookmark ──
 function Bookmark({ category, side }: { category: Category; side: "left" | "right" }) {
-  const name = getName(category);
+  const name = category.name_de;
   const isRight = side === "right";
   return (
     <div aria-hidden="true" className={`absolute top-8 z-20 select-none pointer-events-none ${isRight ? "-right-3" : "-left-3"}`}>
@@ -235,8 +228,8 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
     }
 
     const orderedCatIds = [...groups.keys()].sort((a, b) => {
-      const na = getName(catById.get(a) ?? { name_tr: "", name_de: null });
-      const nb = getName(catById.get(b) ?? { name_tr: "", name_de: null });
+      const na = catById.get(a)?.name_de ?? "";
+      const nb = catById.get(b)?.name_de ?? "";
       return collator.compare(na, nb);
     });
 
@@ -244,14 +237,14 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
     for (const catId of orderedCatIds) {
       const cat = catById.get(catId);
       if (!cat) continue;
-      const items = groups.get(catId)!.sort((a, b) => collator.compare(getName(a), getName(b)));
+      const items = groups.get(catId)!.sort((a, b) => collator.compare(a.name_de, b.name_de));
       result.push({ kind: "cover", category: cat, sample: items });
       for (const ch of chunk(items, PAGE_SIZE)) {
         result.push({ kind: "grid", items: ch, category: cat });
       }
     }
     if (uncategorized.length > 0) {
-      const sorted = [...uncategorized].sort((a, b) => collator.compare(getName(a), getName(b)));
+      const sorted = [...uncategorized].sort((a, b) => collator.compare(a.name_de, b.name_de));
       for (const ch of chunk(sorted, PAGE_SIZE)) {
         result.push({ kind: "grid", items: ch });
       }

@@ -59,11 +59,7 @@ export function StockClient({ products: initialProducts, categories }: Props) {
   const [detail, setDetail] = useState<StockProduct | null>(null);
   const [pendingNavigate, setPendingNavigate] = useState<StockProduct | null>(null);
 
-  const getName = useCallback(
-    (item: { name_tr: string; name_de: string | null }) =>
-      locale === "de" && item.name_de ? item.name_de : item.name_tr,
-    [locale],
-  );
+  const getName = useCallback((item: { name_de: string }) => item.name_de, []);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
@@ -79,17 +75,15 @@ export function StockClient({ products: initialProducts, categories }: Props) {
     if (q) {
       list = list.filter(
         (p) =>
-          getName(p).toLowerCase().includes(q) ||
-          p.name_tr.toLowerCase().includes(q) ||
-          (p.name_de?.toLowerCase().includes(q) ?? false) ||
+          p.name_de.toLowerCase().includes(q) ||
           (p.sku?.toLowerCase().includes(q) ?? false),
       );
     }
     const sorted = [...list];
     if (sort === "low-first") {
-      sorted.sort((a, b) => a.stock - b.stock || getName(a).localeCompare(getName(b), locale));
+      sorted.sort((a, b) => a.stock - b.stock || a.name_de.localeCompare(b.name_de, "de"));
     } else {
-      sorted.sort((a, b) => getName(a).localeCompare(getName(b), locale));
+      sorted.sort((a, b) => a.name_de.localeCompare(b.name_de, "de"));
     }
     return sorted;
   }, [products, catFilter, search, sort, getName, locale]);

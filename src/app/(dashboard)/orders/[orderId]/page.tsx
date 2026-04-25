@@ -14,7 +14,7 @@ import { fetchOrderById, deleteOrder, type OrderRow } from "../actions";
 import type { Order } from "@/lib/types";
 
 /** Convert Supabase OrderRow to the legacy Order shape used by PDF export */
-function toExportOrder(o: OrderRow, locale: string): Order {
+function toExportOrder(o: OrderRow): Order {
   return {
     id: o.id,
     customerId: o.customer_id ?? "",
@@ -22,7 +22,7 @@ function toExportOrder(o: OrderRow, locale: string): Order {
     shopName: o.customer_shop_name,
     items: o.items.map((i) => ({
       productId: i.product_id ?? "",
-      productName: locale === "de" ? (i.product_name_de || i.product_name_tr) : i.product_name_tr,
+      productName: i.product_name_de,
       productImage: i.product_image_url ?? "",
       productSku: i.product_sku ?? undefined,
       productDescription: i.product_description ?? undefined,
@@ -56,7 +56,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     if (!order) return;
     setExporting(true);
     try {
-      await downloadOrderPdf(toExportOrder(order, locale), locale);
+      await downloadOrderPdf(toExportOrder(order), locale);
     } finally {
       setExporting(false);
     }
@@ -66,7 +66,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     if (!order) return;
     setSharing(true);
     try {
-      const file = await generateOrderPdfFile(toExportOrder(order, locale), locale);
+      const file = await generateOrderPdfFile(toExportOrder(order), locale);
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: `${order.customer_shop_name} — ${order.order_number}`,
@@ -86,7 +86,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             : `Sipariş ${order.order_number}\nMüşteri: ${order.customer_shop_name}\nToplam: ${order.total}\n\nPDF indirildi — lütfen ekleyin.`
         );
         // Download PDF first, then open mailto
-        await downloadOrderPdf(toExportOrder(order, locale), locale);
+        await downloadOrderPdf(toExportOrder(order), locale);
         window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_self");
       }
     } finally {
@@ -110,8 +110,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
   const customerDisplay = (o: OrderRow) =>
     o.customer_first_name + (o.customer_last_name ? ` ${o.customer_last_name}` : "");
 
-  const itemName = (i: OrderRow["items"][number]) =>
-    locale === "de" ? (i.product_name_de || i.product_name_tr) : i.product_name_tr;
+  const itemName = (i: OrderRow["items"][number]) => i.product_name_de;
 
   if (!loaded) {
     return <div className="h-96 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse" />;

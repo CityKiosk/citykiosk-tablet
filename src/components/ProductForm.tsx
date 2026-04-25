@@ -52,8 +52,8 @@ export default function ProductForm(props: AddProps | EditProps) {
   const onDelete = props.mode === "edit" ? props.onDelete : undefined;
   const dimPresets = [...new Set([...existingDimensions, ...(initial?.dimensions ? [initial.dimensions] : [])])].sort((a, b) => a.localeCompare(b, "de", { numeric: true }));
 
-  const initialNameDe = initial?.name_de || initial?.name_tr || "";
-  const initialDescDe = initial?.description_de || initial?.description_tr || "";
+  const initialNameDe = initial?.name_de || "";
+  const initialDescDe = initial?.description_de || "";
   const initialImageUrl = initial?.image_url || "";
   const initialCategoryId = initial?.category_id || categories[0]?.id || "";
   const initialPrice = initial?.price || 0;
@@ -85,7 +85,7 @@ export default function ProductForm(props: AddProps | EditProps) {
     sku !== initialSku;
 
   function getName(c: SettingsCategory): string {
-    return locale === "de" && c.name_de ? c.name_de : c.name_tr;
+    return c.name_de;
   }
 
   const [uploading, setUploading] = useState(false);
@@ -187,11 +187,9 @@ export default function ProductForm(props: AddProps | EditProps) {
     startTransition(async () => {
       if (props.mode === "add") {
         const result = await addProduct({
-          name_tr: name,
           name_de: name,
           price,
           category_id: categoryId || null,
-          description_tr: desc || undefined,
           description_de: desc || undefined,
           image_url: imageUrl.trim() || null,
           dimensions: dim.trim() || null,
@@ -206,11 +204,9 @@ export default function ProductForm(props: AddProps | EditProps) {
       } else {
         const formData = new FormData();
         formData.set("id", initial!.id);
-        formData.set("name_tr", name);
         formData.set("name_de", name);
         formData.set("price", String(price));
         formData.set("category_id", categoryId || "");
-        formData.set("description_tr", desc);
         formData.set("description_de", desc);
         if (imageUrl) formData.set("image_url", imageUrl.trim());
         formData.set("sku", sku.trim());
@@ -248,8 +244,8 @@ export default function ProductForm(props: AddProps | EditProps) {
   const invalidImage = showFieldErrors && !imageUrl.trim();
 
   const showNav = props.mode === "edit" && position && position.total > 1;
-  const prevName = prev ? (locale === "de" && prev.name_de ? prev.name_de : prev.name_tr) : "";
-  const nextName = next ? (locale === "de" && next.name_de ? next.name_de : next.name_tr) : "";
+  const prevName = prev?.name_de ?? "";
+  const nextName = next?.name_de ?? "";
   const navBtnBase =
     "inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent";
 
@@ -382,7 +378,6 @@ export default function ProductForm(props: AddProps | EditProps) {
                 ...prev,
                 {
                   id: newId,
-                  name_tr: name,
                   name_de: name,
                   slug: "",
                   sort_order: prev.length,

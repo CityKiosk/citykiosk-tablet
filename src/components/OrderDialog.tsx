@@ -134,8 +134,7 @@ export default function OrderDialog({
 
     const orderItems = items.map((i) => ({
       product_id: i.productId,
-      product_name_tr: i.productNameTr || i.productName,
-      product_name_de: i.productNameDe ?? null,
+      product_name_de: i.productNameDe || i.productName,
       product_image_url: i.productImage || null,
       product_sku: i.productSku ?? null,
       product_description: i.productDescription ?? null,

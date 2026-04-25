@@ -1,13 +1,14 @@
 "use client";
 
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import { dict, Dict } from "@/lib/i18n";
 import { Locale } from "@/lib/types";
 
-const STORAGE_KEY = "souvenir_locale";
-
 type Ctx = {
   locale: Locale;
+  /** No-op shim — TR support removed, locale is always "de". Kept on the
+   *  context shape so existing callers (LangSwitcher legacy refs, etc.) do
+   *  not break. */
   setLocale: (l: Locale) => void;
   t: Dict;
 };
@@ -15,18 +16,12 @@ type Ctx = {
 const I18nCtx = createContext<Ctx | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const locale: Locale = "de";
-
   useEffect(() => {
     document.documentElement.lang = "de";
   }, []);
 
-  const setLocale = useCallback((_l: Locale) => {
-    // Turkish support removed — locale is always "de"
-  }, []);
-
   return (
-    <I18nCtx.Provider value={{ locale, setLocale, t: dict[locale] }}>
+    <I18nCtx.Provider value={{ locale: "de", setLocale: () => {}, t: dict.de }}>
       {children}
     </I18nCtx.Provider>
   );

@@ -69,13 +69,8 @@ export default function StockDetailDialog({
   const draftParsed = parseDraft();
   const isDirty = draftParsed !== null && draftParsed !== lastPersisted;
 
-  const name = locale === "de" && product.name_de ? product.name_de : product.name_tr;
-  const altName = locale === "de" ? product.name_tr : product.name_de;
-  const description =
-    (locale === "de" ? product.description_de : product.description_tr) ||
-    product.description_de ||
-    product.description_tr ||
-    "";
+  const name = product.name_de;
+  const description = product.description_de || "";
   const isNegative = value < 0;
   const isLow = value >= 0 && value <= 5;
 
@@ -168,7 +163,7 @@ export default function StockDetailDialog({
             type="button"
             onClick={() => handleNavigate(prev)}
             disabled={!prev}
-            aria-label={prev ? t.add2.prevItem(locale === "de" && prev.name_de ? prev.name_de : prev.name_tr) : t.add2.prevItem("")}
+            aria-label={prev ? t.add2.prevItem(prev.name_de) : t.add2.prevItem("")}
             className="cursor-pointer inline-flex items-center gap-1 h-9 px-3 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
           >
             <ChevronLeftIcon width={14} height={14} />
@@ -181,7 +176,7 @@ export default function StockDetailDialog({
             type="button"
             onClick={() => handleNavigate(next)}
             disabled={!next}
-            aria-label={next ? t.add2.nextItem(locale === "de" && next.name_de ? next.name_de : next.name_tr) : t.add2.nextItem("")}
+            aria-label={next ? t.add2.nextItem(next.name_de) : t.add2.nextItem("")}
             className="cursor-pointer inline-flex items-center gap-1 h-9 px-3 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
           >
             <ChevronRightIcon width={14} height={14} />
@@ -202,11 +197,6 @@ export default function StockDetailDialog({
 
         {/* Details (read-only) */}
         <div className="space-y-3">
-          {altName && altName !== name && (
-            <ReadField label={locale === "de" ? "TR" : "DE"}>
-              <span className="text-sm text-slate-700 dark:text-slate-300">{altName}</span>
-            </ReadField>
-          )}
           {categoryName && (
             <ReadField label={t.add.category}>
               <span className="text-sm text-slate-700 dark:text-slate-300">{categoryName}</span>

@@ -1,8 +1,10 @@
-export type Locale = "tr" | "de";
+/** Single-locale app — DE only. The Locale alias stays so existing call
+ *  sites (formatPrice, formatDate, useI18n().locale) keep type-checking
+ *  without a global churn; new code can ignore it. */
+export type Locale = "de";
 
 export type Category = {
   id: string;
-  nameTr: string;
   nameDe: string;
 };
 
@@ -29,7 +31,6 @@ export type Customer = {
 export type OrderItem = {
   productId: string;
   productName: string;
-  productNameTr?: string;
   productNameDe?: string | null;
   productImage: string;
   productSku?: string;

@@ -13,8 +13,7 @@ export default function AddCategoryDialog({
   onSaved: () => void;
 }) {
   const { t } = useI18n();
-  const [nameTr, setNameTr] = useState("");
-  const [nameDe, setNameDe] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -23,23 +22,21 @@ export default function AddCategoryDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const tr = nameTr.trim();
-    const de = nameDe.trim();
-    if (!tr) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       setError(t.addCategory.nameRequired);
       return;
     }
-    // Generate slug from TR name
-    const slug = tr
+    // Generate slug from the German name (single-locale app).
+    const slug = trimmed
       .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[̀-ͯ]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
     const formData = new FormData();
-    formData.set("name_tr", tr);
-    formData.set("name_de", de || tr);
+    formData.set("name_de", trimmed);
     formData.set("slug", slug);
 
     startTransition(async () => {
@@ -64,32 +61,18 @@ export default function AddCategoryDialog({
           </div>
         )}
         <div>
-          <label htmlFor="ac-name-tr" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            {t.addCategory.nameLabel} (TR) <span className="text-red-500">*</span>
+          <label htmlFor="ac-name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            {t.addCategory.nameLabel} <span className="text-red-500">*</span>
           </label>
           <input
-            id="ac-name-tr"
+            id="ac-name"
             type="text"
-            value={nameTr}
-            onChange={(e) => setNameTr(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             required
             autoFocus
             className={inputCls}
           />
-        </div>
-        <div>
-          <label htmlFor="ac-name-de" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            {t.addCategory.nameLabel} (DE)
-          </label>
-          <input
-            id="ac-name-de"
-            type="text"
-            value={nameDe}
-            onChange={(e) => setNameDe(e.target.value)}
-            placeholder={nameTr || "—"}
-            className={inputCls}
-          />
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">{t.addCategory.nameHint}</p>
         </div>
       </form>
       <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 rounded-b-2xl flex justify-end gap-2">

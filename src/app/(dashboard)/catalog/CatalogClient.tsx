@@ -17,31 +17,24 @@ import { SearchIcon, PackageIcon } from "@/components/icons";
 type Category = {
   id: string;
   slug: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   sort_order: number;
 };
 
 type Product = {
   id: string;
-  name_tr: string;
-  name_de: string | null;
+  name_de: string;
   price: number;
   image_url: string | null;
   category_id: string | null;
   dimensions: string | null;
   packaging_unit: number | null;
   sku: string | null;
-  description_tr: string | null;
   description_de: string | null;
   sort_order: number;
 };
 
 type Sort = "name" | "price-asc" | "price-desc";
-
-function getName(item: { name_tr: string; name_de: string | null }, locale: string): string {
-  return locale === "de" && item.name_de ? item.name_de : item.name_tr;
-}
 
 export function CatalogClient({
   categories,
@@ -50,7 +43,7 @@ export function CatalogClient({
   categories: Category[];
   products: Product[];
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("name");
@@ -90,25 +83,23 @@ export function CatalogClient({
     let list = products.filter((p) => {
       if (activeCat !== "all" && p.category_id !== activeCat) return false;
       if (!q) return true;
-      const name = getName(p, locale).toLowerCase();
+      const name = p.name_de.toLowerCase();
       const sku = (p.sku ?? "").toLowerCase();
       const cat = p.category_id ? catById.get(p.category_id) : undefined;
-      const catName = cat ? getName(cat, locale).toLowerCase() : "";
+      const catName = cat ? cat.name_de.toLowerCase() : "";
       return name.includes(q) || sku.includes(q) || catName.includes(q);
     });
 
     if (sort === "name") {
-      const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
-      list = [...list].sort((a, b) =>
-        collator.compare(getName(a, locale), getName(b, locale)),
-      );
+      const collator = new Intl.Collator("de", { numeric: true, sensitivity: "base" });
+      list = [...list].sort((a, b) => collator.compare(a.name_de, b.name_de));
     } else if (sort === "price-asc") {
       list = [...list].sort((a, b) => a.price - b.price);
     } else {
       list = [...list].sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [search, activeCat, products, locale, sort, catById]);
+  }, [search, activeCat, products, sort, catById]);
 
   // Infinite scroll observer — re-attach when visibleCount or filtered changes
   const hasMore = visibleCount < filtered.length;
@@ -151,7 +142,7 @@ export function CatalogClient({
             />
           </div>
           <div className="flex items-center gap-2">
-            <div className="inline-flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" role="group" aria-label={locale === "de" ? "Spalten" : "Sütun"}>
+            <div className="inline-flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" role="group" aria-label="Spalten">
               {([2, 3] as const).map((n) => (
                 <button
                   key={n}
@@ -193,7 +184,7 @@ export function CatalogClient({
           {categories.map((c) => (
             <CatChip
               key={c.id}
-              label={getName(c, locale)}
+              label={c.name_de}
               active={activeCat === c.id}
               onClick={() => { setActiveCat(c.id); setVisibleCount(24); }}
               count={countByCat.get(c.id) || 0}
@@ -206,8 +197,8 @@ export function CatalogClient({
       {products.length === 0 ? (
         <EmptyState
           icon={<PackageIcon width={24} height={24} />}
-          title={locale === "de" ? "Noch keine Produkte" : "Henüz ürün yok"}
-          actionLabel={locale === "de" ? "Produkte werden bald hinzugefügt" : "Ürünler yakında eklenecek"}
+          title="Noch keine Produkte"
+          actionLabel="Produkte werden bald hinzugefügt"
         />
       ) : filtered.length === 0 ? (
         <EmptyState
@@ -239,14 +230,10 @@ export function CatalogClient({
                     price: p.price,
                     sku: p.sku || undefined,
                     dim: p.dimensions || undefined,
-                    description: (locale === "de" ? p.description_de : p.description_tr) || p.description_de || p.description_tr || undefined,
-                    customName: getName(p, locale),
+                    description: p.description_de || undefined,
+                    customName: p.name_de,
                   }}
-                  category={
-                    cat
-                      ? { id: cat.id, nameTr: cat.name_tr, nameDe: cat.name_de || cat.name_tr }
-                      : undefined
-                  }
+                  category={cat ? { id: cat.id, nameDe: cat.name_de } : undefined}
                   isCustom={false}
                 />
               );

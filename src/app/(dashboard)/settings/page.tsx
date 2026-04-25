@@ -75,9 +75,7 @@ export default function SettingsPage() {
     if (unlocked) reload();
   }, [unlocked]);
 
-  const getName = useCallback((item: { name_tr: string; name_de: string | null }): string => {
-    return locale === "de" && item.name_de ? item.name_de : item.name_tr;
-  }, [locale]);
+  const getName = useCallback((item: { name_de: string }): string => item.name_de, []);
 
   const catById = useMemo(
     () => new Map(categories.map((c) => [c.id, c] as const)),
@@ -96,14 +94,10 @@ export default function SettingsPage() {
     }
     const q = prodSearch.trim().toLowerCase();
     if (q) {
-      list = list.filter((p) =>
-        getName(p).toLowerCase().includes(q) ||
-        p.name_tr.toLowerCase().includes(q) ||
-        (p.name_de?.toLowerCase().includes(q) ?? false)
-      );
+      list = list.filter((p) => p.name_de.toLowerCase().includes(q));
     }
     return list;
-  }, [products, prodCatFilter, prodSearch, getName]);
+  }, [products, prodCatFilter, prodSearch]);
 
   function handleDeleteCategory(c: SettingsCategory) {
     setConfirm({
@@ -221,13 +215,8 @@ export default function SettingsPage() {
                   <li key={c.id} className="flex items-center justify-between px-5 py-3">
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                        {getName(c)}
+                        {c.name_de}
                       </span>
-                      {c.name_de && c.name_tr !== c.name_de && (
-                        <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                          ({locale === "de" ? c.name_tr : c.name_de})
-                        </span>
-                      )}
                     </div>
                     <button
                       type="button"
@@ -351,9 +340,9 @@ export default function SettingsPage() {
                         )}
                       </div>
                       <div className="p-3">
-                        <div className="font-medium text-sm text-slate-900 dark:text-slate-50 truncate">{getName(p)}</div>
-                        {(p.description_de || p.description_tr) && (
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{locale === "de" ? (p.description_de || p.description_tr) : (p.description_tr || p.description_de)}</div>
+                        <div className="font-medium text-sm text-slate-900 dark:text-slate-50 truncate">{p.name_de}</div>
+                        {p.description_de && (
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{p.description_de}</div>
                         )}
                         {p.dimensions && (
                           <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{t.product.dimensions}: {p.dimensions}</div>
@@ -362,7 +351,7 @@ export default function SettingsPage() {
                           <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{t.product.artNr} {p.sku}</div>
                         )}
                         <div className="tabular text-sm font-semibold text-sky-700 dark:text-sky-400 mt-1">
-                          {formatPrice(p.price, locale)}
+                          {formatPrice(p.price)}
                         </div>
                       </div>
                     </button>

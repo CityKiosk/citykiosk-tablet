@@ -44,8 +44,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
-          name_de: string | null
-          name_tr: string
+          name_de: string
           owner_id: string
           slug: string
           sort_order: number
@@ -55,8 +54,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          name_de?: string | null
-          name_tr: string
+          name_de: string
           owner_id?: string
           slug: string
           sort_order?: number
@@ -66,8 +64,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          name_de?: string | null
-          name_tr?: string
+          name_de?: string
           owner_id?: string
           slug?: string
           sort_order?: number
@@ -168,8 +165,7 @@ export type Database = {
           owner_id: string
           product_id: string | null
           product_image_url: string | null
-          product_name_de: string | null
-          product_name_tr: string
+          product_name_de: string
           product_sku: string | null
           product_description: string | null
           quantity: number
@@ -184,8 +180,7 @@ export type Database = {
           owner_id?: string
           product_id?: string | null
           product_image_url?: string | null
-          product_name_de?: string | null
-          product_name_tr: string
+          product_name_de: string
           product_sku?: string | null
           product_description?: string | null
           quantity: number
@@ -200,8 +195,7 @@ export type Database = {
           owner_id?: string
           product_id?: string | null
           product_image_url?: string | null
-          product_name_de?: string | null
-          product_name_tr?: string
+          product_name_de?: string
           product_sku?: string | null
           product_description?: string | null
           quantity?: number
@@ -300,13 +294,11 @@ export type Database = {
           category_id: string | null
           created_at: string
           description_de: string | null
-          description_tr: string | null
           dimensions: string | null
           id: string
           image_url: string | null
           is_active: boolean
-          name_de: string | null
-          name_tr: string
+          name_de: string
           owner_id: string
           packaging_unit: number | null
           price: number
@@ -319,13 +311,11 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description_de?: string | null
-          description_tr?: string | null
           dimensions?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
-          name_de?: string | null
-          name_tr: string
+          name_de: string
           owner_id?: string
           packaging_unit?: number | null
           price: number
@@ -338,13 +328,11 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description_de?: string | null
-          description_tr?: string | null
           dimensions?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
-          name_de?: string | null
-          name_tr?: string
+          name_de?: string
           owner_id?: string
           packaging_unit?: number | null
           price?: number
@@ -442,23 +430,20 @@ export type Database = {
         Returns: {
           products: {
             id: string
-            name_tr: string
-            name_de: string | null
+            name_de: string
             price: number
             image_url: string | null
             category_id: string | null
             dimensions: string | null
             packaging_unit: number | null
             sku: string | null
-            description_tr: string | null
             description_de: string | null
             sort_order: number
           }[] | null
           categories: {
             id: string
             slug: string
-            name_tr: string
-            name_de: string | null
+            name_de: string
             sort_order: number
           }[] | null
           display_fields: {
