@@ -57,3 +57,8 @@ export const pinVerifyRateLimit = createLimiter(5, 60_000);
  * Separate bucket so an unlock lockout doesn't block the owner from
  * changing the PIN (and vice versa). Rotation path is rarer, so tighter. */
 export const pinSetRateLimit = createLimiter(3, 5 * 60_000);
+
+/** Order creation: 60 per minute per user. Prevents queue replay / fuzzing
+ * abuse. Idempotency key handles same-key duplicates; this caps fresh-key
+ * spam where an attacker generates new keys to bypass dedup. */
+export const createOrderRateLimit = createLimiter(60, 60_000);

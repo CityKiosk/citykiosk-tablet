@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { pinSetRateLimit, pinVerifyRateLimit } from "@/lib/rateLimit";
+import { requirePinUnlocked, getPinStatus as getPinStatusHelper } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -62,6 +63,9 @@ export async function updateDisplayField(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
+
   // Partial merge via Postgres jsonb concat operator (avoids race conditions
   // when two devices toggle different keys concurrently).
   const { error } = await supabase.rpc("update_display_field", {
@@ -73,6 +77,22 @@ export async function updateDisplayField(
   if (error) return { error: "Speichern fehlgeschlagen" };
 
   revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** Server-side PIN status used by PinGate. Returns whether PIN exists and
+ *  whether the unlock window is currently active. */
+export async function getPinStatus() {
+  return getPinStatusHelper();
+}
+
+/** Explicit lock — clears the unlock timestamp. Called by IdleLock and any
+ *  "lock now" UI affordance. */
+export async function lockPin(): Promise<{ success?: boolean }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+  await supabase.rpc("lock_admin_pin");
   return { success: true };
 }
 

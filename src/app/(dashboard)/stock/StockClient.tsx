@@ -11,6 +11,7 @@ import { SearchIcon } from "@/components/icons";
 import PinGate from "@/components/PinGate";
 import IdleLock, { ADMIN_IDLE_LOCK_MS } from "@/components/IdleLock";
 import { updateStock } from "./actions";
+import { lockPin } from "@/app/(dashboard)/settings/actions";
 import type { StockCategory, StockProduct } from "./types";
 
 type Props = {
@@ -142,6 +143,7 @@ export function StockClient({ products: initialProducts, categories }: Props) {
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+          void lockPin();
           setUnlocked(false);
         }}
       />

@@ -40,9 +40,13 @@ function safeNextPath(next: string | undefined): string {
 }
 
 export async function signIn(_prev: SignInState, formData: FormData): Promise<SignInState> {
-  // Rate limit by IP (in-memory, works on Render persistent process)
+  // Rate limit by IP (in-memory, works on Render persistent process).
+  // X-Forwarded-For is "client, proxy1, proxy2, ..."; the trustworthy entry
+  // is the LAST hop (Render's edge), not the first (which the client controls).
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const xff = h.get("x-forwarded-for");
+  const xffParts = xff?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const ip = xffParts.at(-1) || h.get("x-real-ip")?.trim() || "unknown";
   if (!loginRateLimit.check(ip)) {
     return { error: "Zu viele Versuche. Bitte warten. / Çok fazla deneme. Lütfen bekleyin." };
   }

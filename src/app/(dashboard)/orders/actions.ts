@@ -1,24 +1,29 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requirePinUnlocked } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createOrderRateLimit } from "@/lib/rateLimit";
 
 // ── Create Order ──
 const safeImageUrl = z.string().refine(
-  (val) => !val.startsWith("javascript:") && !val.startsWith("vbscript:"),
+  (val) => {
+    const lower = val.toLowerCase().trim();
+    return !lower.startsWith("javascript:") && !lower.startsWith("vbscript:") && !lower.startsWith("data:text/");
+  },
   { message: "Invalid image URL" }
 ).nullable();
 
 const OrderItemSchema = z.object({
   product_id: z.string().uuid(),
-  product_name_tr: z.string().min(1, "Produktname erforderlich"),
-  product_name_de: z.string().nullable(),
+  product_name_tr: z.string().min(1, "Produktname erforderlich").max(500),
+  product_name_de: z.string().max(500).nullable(),
   product_image_url: safeImageUrl,
-  product_sku: z.string().nullable().optional(),
-  product_description: z.string().nullable().optional(),
-  quantity: z.number().int().positive(),
-  unit_price: z.number().min(0),
+  product_sku: z.string().max(100).nullable().optional(),
+  product_description: z.string().max(2000).nullable().optional(),
+  quantity: z.number().int().positive().max(99_999),
+  unit_price: z.number().min(0).max(1_000_000),
 });
 
 const CreateOrderSchema = z.object({
@@ -26,11 +31,11 @@ const CreateOrderSchema = z.object({
   idempotency_key: z.string().uuid().optional(),
   // Existing customer OR new customer fields
   customer_id: z.string().uuid().optional(),
-  customer_first_name: z.string().min(1, "Name erforderlich"),
-  customer_last_name: z.string().optional(),
-  customer_shop_name: z.string().min(1, "Firmenname erforderlich"),
-  notes: z.string().optional(),
-  items: z.array(OrderItemSchema).min(1, "Mindestens ein Produkt"),
+  customer_first_name: z.string().min(1, "Name erforderlich").max(100),
+  customer_last_name: z.string().max(100).optional(),
+  customer_shop_name: z.string().min(1, "Firmenname erforderlich").max(200),
+  notes: z.string().max(2000).optional(),
+  items: z.array(OrderItemSchema).min(1, "Mindestens ein Produkt").max(500),
 });
 
 export type CreateOrderState = {
@@ -65,6 +70,10 @@ export async function createOrder(input: {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  if (!createOrderRateLimit.check(user.id)) {
+    return { error: "Zu viele Bestellungen — bitte einen Moment warten / Çok fazla sipariş — lütfen biraz bekleyin" };
+  }
 
   const data = parsed.data;
 
@@ -247,6 +256,9 @@ export async function deleteOrder(orderId: string): Promise<{ error?: string }> 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
+
   const { error } = await supabase
     .from("orders")
     .delete()
@@ -292,6 +304,9 @@ export async function fetchOrders(): Promise<{ data?: OrderRow[]; error?: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
+
   const { data, error } = await supabase
     .from("orders")
     .select(`
@@ -321,6 +336,9 @@ export async function fetchOrderById(orderId: string): Promise<{ data?: OrderRow
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
     .from("orders")
@@ -386,6 +404,9 @@ export async function fetchCustomerStats(): Promise<{ data?: CustomerStatRow[]; 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
 
   // Fetch customers
   const { data: customers, error: custErr } = await supabase

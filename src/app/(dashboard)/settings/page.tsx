@@ -22,6 +22,7 @@ import {
   type SettingsCategory,
   type SettingsProduct,
 } from "@/app/(dashboard)/catalog/actions";
+import { lockPin } from "@/app/(dashboard)/settings/actions";
 
 type Tab = "categories" | "products" | "data" | "display";
 
@@ -164,6 +165,7 @@ export default function SettingsPage() {
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+          void lockPin();
           setUnlocked(false);
         }}
       />

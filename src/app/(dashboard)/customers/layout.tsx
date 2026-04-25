@@ -5,6 +5,7 @@ import { useI18n } from "@/components/I18nProvider";
 import PageHeader from "@/components/PageHeader";
 import PinGate from "@/components/PinGate";
 import IdleLock, { ADMIN_IDLE_LOCK_MS } from "@/components/IdleLock";
+import { lockPin } from "@/app/(dashboard)/settings/actions";
 
 // Per-page unlock key. Each admin page has its own key — see StockClient
 // for rationale (prevents cross-page leak when the tablet is handed over).
@@ -47,6 +48,10 @@ export default function CustomersLayout({ children }: { children: React.ReactNod
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+          // Server lock so a DevTools attacker on a freshly unattended tablet
+          // can't fire admin actions during the slack between idle-expire and
+          // the next PIN prompt.
+          void lockPin();
           setUnlocked(false);
         }}
       />

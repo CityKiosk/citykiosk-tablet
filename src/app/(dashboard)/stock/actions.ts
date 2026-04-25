@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requirePinUnlocked } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { LOW_STOCK_THRESHOLD, type StockCategory, type StockProduct } from "./types";
@@ -53,6 +54,9 @@ export async function updateStock(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
     .from("products")

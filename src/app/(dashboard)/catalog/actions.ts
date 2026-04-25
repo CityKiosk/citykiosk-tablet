@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requirePinUnlocked } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -60,6 +61,9 @@ export async function updateProduct(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet / Giriş yapılmamış" };
 
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich / PIN gerekli" };
+
   const { error } = await supabase
     .from("products")
     .update({
@@ -96,6 +100,9 @@ export async function deleteProduct(productId: string): Promise<{ error?: string
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
 
   // Delete image from storage
   const { data: product } = await supabase
@@ -152,6 +159,9 @@ export async function addCategory(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
 
   const { error } = await supabase.from("categories").insert({
     name_tr: parsed.data.name_tr,
@@ -249,6 +259,9 @@ export async function deleteCategory(categoryId: string): Promise<{ error?: stri
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
+
   // Check if any products use this category
   const { count } = await supabase
     .from("products")
@@ -345,6 +358,9 @@ export async function addProduct(input: {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked();
+  if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
     .from("products")

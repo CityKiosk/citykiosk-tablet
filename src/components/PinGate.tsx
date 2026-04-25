@@ -5,7 +5,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { LockIcon } from "@/components/icons";
 import PinPad from "@/components/PinPad";
 import {
-  hasPin,
+  getPinStatus,
   setPin as setPinAction,
   verifyPin,
   type PinErrorCode,
@@ -52,25 +52,37 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey }: Props) 
   const [newPin, setNewPin] = useState<string | null>(null);
   const [probe, setProbe] = useState(0);
 
-  // Decide mode based on whether the account has a PIN yet. A network/DB
-  // error surfaces as a retry-able state instead of silently dropping into
-  // "unlock" — otherwise first-time owners with a transient failure get
-  // locked out of setup with no obvious way forward.
+  // Decide mode based on (1) whether the account has a PIN yet and (2) whether
+  // the server-side unlock window is already active. If the server says
+  // unlocked, skip the pinpad entirely and tell the parent — protects against
+  // a tablet handover triggering an unnecessary re-prompt within the window.
+  // A network/DB error surfaces as a retry-able state instead of silently
+  // dropping into "unlock" — otherwise first-time owners with a transient
+  // failure get locked out of setup with no obvious way forward.
   useEffect(() => {
     let cancelled = false;
     setMode("loading");
-    hasPin().then((result) => {
+    getPinStatus().then((status) => {
       if (cancelled) return;
-      if (result.error) {
+      if (!status.authenticated) {
         setMode("loadError");
         return;
       }
-      setMode(result.exists ? "unlock" : "setupNew");
+      if (status.unlocked) {
+        try {
+          sessionStorage.setItem(sessionKey, "1");
+        } catch {}
+        onUnlocked();
+        return;
+      }
+      setMode(status.pinExists ? "unlock" : "setupNew");
+    }).catch(() => {
+      if (!cancelled) setMode("loadError");
     });
     return () => {
       cancelled = true;
     };
-  }, [probe]);
+  }, [probe, onUnlocked, sessionKey]);
 
   const flashError = useCallback((message: string) => {
     setError(message);
