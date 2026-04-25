@@ -48,14 +48,23 @@ export function CatalogClient({
   const [activeCat, setActiveCat] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("name");
   const [visibleCount, setVisibleCount] = useState(18);
-  const [gridCols, setGridCols] = useState<2 | 3>(() => {
-    if (typeof window === "undefined") return 2;
-    return (localStorage.getItem("catalog_cols") === "3" ? 3 : 2);
-  });
+  // Default to 2 cols on both server + first client paint to avoid an SSR
+  // hydration mismatch (was: read localStorage in the initializer, which
+  // returns "3" on the client but "2" on the server, leaving React with
+  // stale state where setGridCols(3) becomes a no-op bailout). Storage is
+  // applied after mount instead.
+  const [gridCols, setGridCols] = useState<2 | 3>(2);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("catalog_cols") === "3") setGridCols(3);
+    } catch {}
+  }, []);
 
   function toggleGridCols(cols: 2 | 3) {
     setGridCols(cols);
-    localStorage.setItem("catalog_cols", String(cols));
+    try {
+      localStorage.setItem("catalog_cols", String(cols));
+    } catch {}
   }
 
   const loadMore = useCallback(() => {
