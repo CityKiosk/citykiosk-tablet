@@ -70,7 +70,7 @@ export default function OrderDialog({
   async function handleVerifyPin(pin: string) {
     setPinPending(true);
     setPinError(null);
-    const result = await verifyPin(pin);
+    const result = await verifyPin(pin, "customers");
     setPinPending(false);
     if (result.error) {
       setPinError(pinErrorMessage(result.error, t));

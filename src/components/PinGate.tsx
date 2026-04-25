@@ -10,6 +10,7 @@ import {
   verifyPin,
   type PinErrorCode,
 } from "@/app/(dashboard)/settings/actions";
+import type { PinScope } from "@/lib/pinSession";
 
 type Mode = "loading" | "loadError" | "unlock" | "setupNew" | "setupConfirm";
 
@@ -20,6 +21,10 @@ type Props = {
   onUnlocked: () => void;
   /** sessionStorage key used to mark this tab as unlocked. */
   sessionKey: string;
+  /** Server-side scope for the unlock. Each gated screen passes its own
+   *  scope so unlocking one (e.g. /settings) does not implicitly unlock
+   *  another (e.g. /stock). */
+  scope: PinScope;
 };
 
 function pinErrorMessage(
@@ -42,7 +47,7 @@ function pinErrorMessage(
   }
 }
 
-export default function PinGate({ unlockTitle, onUnlocked, sessionKey }: Props) {
+export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope }: Props) {
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("loading");
   const [pending, setPending] = useState(false);
@@ -52,27 +57,20 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey }: Props) 
   const [newPin, setNewPin] = useState<string | null>(null);
   const [probe, setProbe] = useState(0);
 
-  // Decide mode based on (1) whether the account has a PIN yet and (2) whether
-  // the server-side unlock window is already active. If the server says
-  // unlocked, skip the pinpad entirely and tell the parent — protects against
-  // a tablet handover triggering an unnecessary re-prompt within the window.
-  // A network/DB error surfaces as a retry-able state instead of silently
-  // dropping into "unlock" — otherwise first-time owners with a transient
-  // failure get locked out of setup with no obvious way forward.
+  // Always require fresh PIN entry on each admin page visit. Threat model:
+  // owner hands the tablet to a customer; customer must NOT be able to walk
+  // into /settings or /orders just because the owner unlocked recently.
+  // Server-side unlock window is kept short (≤5 min) and serves only as
+  // defense-in-depth against DevTools server-action calls — not as a UX
+  // shortcut to skip the pinpad. getPinStatus is still consulted to decide
+  // setupNew vs unlock mode (does the account have a PIN at all yet?).
   useEffect(() => {
     let cancelled = false;
     setMode("loading");
-    getPinStatus().then((status) => {
+    getPinStatus(scope).then((status) => {
       if (cancelled) return;
       if (!status.authenticated) {
         setMode("loadError");
-        return;
-      }
-      if (status.unlocked) {
-        try {
-          sessionStorage.setItem(sessionKey, "1");
-        } catch {}
-        onUnlocked();
         return;
       }
       setMode(status.pinExists ? "unlock" : "setupNew");
@@ -82,7 +80,7 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey }: Props) 
     return () => {
       cancelled = true;
     };
-  }, [probe, onUnlocked, sessionKey]);
+  }, [probe, scope]);
 
   const flashError = useCallback((message: string) => {
     setError(message);
@@ -92,17 +90,25 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey }: Props) 
   const handleUnlock = useCallback(async (pin: string) => {
     setPending(true);
     setError(null);
-    const result = await verifyPin(pin);
-    setPending(false);
-    if (result.error) {
-      flashError(pinErrorMessage(result.error, t));
-      return;
-    }
     try {
-      sessionStorage.setItem(sessionKey, "1");
-    } catch {}
-    onUnlocked();
-  }, [flashError, onUnlocked, sessionKey, t]);
+      const result = await verifyPin(pin, scope);
+      if (result.error) {
+        flashError(pinErrorMessage(result.error, t));
+        return;
+      }
+      try {
+        sessionStorage.setItem(sessionKey, "1");
+      } catch {}
+      onUnlocked();
+    } catch (err) {
+      // Server action threw (network blip, runtime error, RPC type mismatch).
+      // Surface a generic message instead of a frozen "verifying" spinner.
+      console.error("[PinGate] verifyPin threw:", err);
+      flashError(pinErrorMessage("internal", t));
+    } finally {
+      setPending(false);
+    }
+  }, [flashError, onUnlocked, sessionKey, scope, t]);
 
   const handleNewPin = useCallback((pin: string) => {
     setNewPin(pin);
@@ -118,23 +124,29 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey }: Props) 
     }
     setPending(true);
     setError(null);
-    const result = await setPinAction(null, pin);
-    setPending(false);
-    if (result.error) {
-      flashError(pinErrorMessage(result.error, t));
-      if (result.error !== "wrong_pin") {
-        setNewPin(null);
-        setMode("setupNew");
-        setResetKey((k) => k + 1);
-      }
-      return;
-    }
-    // Clear captured PIN before unlocking (minimise DevTools-visible window).
-    setNewPin(null);
     try {
-      sessionStorage.setItem(sessionKey, "1");
-    } catch {}
-    onUnlocked();
+      const result = await setPinAction(null, pin);
+      if (result.error) {
+        flashError(pinErrorMessage(result.error, t));
+        if (result.error !== "wrong_pin") {
+          setNewPin(null);
+          setMode("setupNew");
+          setResetKey((k) => k + 1);
+        }
+        return;
+      }
+      // Clear captured PIN before unlocking (minimise DevTools-visible window).
+      setNewPin(null);
+      try {
+        sessionStorage.setItem(sessionKey, "1");
+      } catch {}
+      onUnlocked();
+    } catch (err) {
+      console.error("[PinGate] setPin threw:", err);
+      flashError(pinErrorMessage("internal", t));
+    } finally {
+      setPending(false);
+    }
   }, [flashError, newPin, onUnlocked, sessionKey, t]);
 
   const backToSetupNew = useCallback(() => {

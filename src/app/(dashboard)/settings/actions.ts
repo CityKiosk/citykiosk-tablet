@@ -2,9 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { pinSetRateLimit, pinVerifyRateLimit } from "@/lib/rateLimit";
-import { requirePinUnlocked, getPinStatus as getPinStatusHelper } from "@/lib/pinSession";
+import { requirePinUnlocked, getPinStatus as getPinStatusHelper, type PinScope } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+
+const PinScopeSchema = z.enum(["settings", "stock", "orders", "customers"]);
 import {
   DISPLAY_FIELD_DEFAULTS,
   DISPLAY_FIELDS_BY_SCOPE_DEFAULTS,
@@ -63,7 +65,7 @@ export async function updateDisplayField(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("settings");
   if (gate) return { error: "PIN erforderlich" };
 
   // Partial merge via Postgres jsonb concat operator (avoids race conditions
@@ -81,18 +83,23 @@ export async function updateDisplayField(
 }
 
 /** Server-side PIN status used by PinGate. Returns whether PIN exists and
- *  whether the unlock window is currently active. */
-export async function getPinStatus() {
-  return getPinStatusHelper();
+ *  whether the unlock window for the given scope is currently active. */
+export async function getPinStatus(scope: PinScope) {
+  if (!PinScopeSchema.safeParse(scope).success) {
+    return { authenticated: false, pinExists: false, unlocked: false };
+  }
+  return getPinStatusHelper(scope);
 }
 
-/** Explicit lock — clears the unlock timestamp. Called by IdleLock and any
- *  "lock now" UI affordance. */
-export async function lockPin(): Promise<{ success?: boolean }> {
+/** Explicit lock for a single scope. Called by IdleLock and the layout
+ *  cleanup hook on navigation away. Pass `null` (or omit) to clear all
+ *  scopes — used on logout. */
+export async function lockPin(scope?: PinScope | null): Promise<{ success?: boolean }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return {};
-  await supabase.rpc("lock_admin_pin");
+  if (scope && !PinScopeSchema.safeParse(scope).success) return {};
+  await supabase.rpc("lock_admin_pin", { p_scope: scope ?? null });
   return { success: true };
 }
 
@@ -122,7 +129,7 @@ export async function hasPin(): Promise<{ exists?: boolean; error?: PinErrorCode
   return { exists: !!data };
 }
 
-export async function verifyPin(pin: string): Promise<{ success?: boolean; error?: PinErrorCode }> {
+export async function verifyPin(pin: string, scope: PinScope): Promise<{ success?: boolean; error?: PinErrorCode }> {
   // Auth first — rate-limit key is user.id so anonymous attempts can't even
   // register against a bucket (handled by getUser bailout below).
   const supabase = await createClient();
@@ -137,7 +144,11 @@ export async function verifyPin(pin: string): Promise<{ success?: boolean; error
     return { error: "invalid_format" };
   }
 
-  const { data, error } = await supabase.rpc("verify_admin_pin", { p_pin: pin });
+  if (!PinScopeSchema.safeParse(scope).success) {
+    return { error: "invalid_format" };
+  }
+
+  const { data, error } = await supabase.rpc("verify_admin_pin", { p_pin: pin, p_scope: scope });
   if (error) return { error: "internal" };
   if (!data) return { error: "wrong_pin" };
   return { success: true };

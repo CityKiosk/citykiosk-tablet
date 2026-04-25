@@ -44,6 +44,7 @@ export default function SettingsPage() {
     // owner hands the tablet to a customer.
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      void lockPin("settings");
     };
   }, []);
 
@@ -144,6 +145,7 @@ export default function SettingsPage() {
         <PinGate
           unlockTitle={t.pin.unlockTitleSettings}
           sessionKey={UNLOCK_KEY}
+          scope="settings"
           onUnlocked={() => setUnlocked(true)}
         />
       </div>
@@ -165,7 +167,7 @@ export default function SettingsPage() {
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
-          void lockPin();
+          void lockPin("settings");
           setUnlocked(false);
         }}
       />

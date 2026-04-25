@@ -21,9 +21,13 @@ export default function CustomersLayout({ children }: { children: React.ReactNod
       if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
     } catch {}
     setChecked(true);
-    // Lock on navigation away.
+    // Lock on navigation away — both client gate (sessionStorage) AND
+    // server-side scope. Without the server lock, a customer with brief
+    // tablet access could re-enter /customers within the 5-min window
+    // and the server would still accept admin actions.
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      void lockPin("customers");
     };
   }, []);
 
@@ -36,6 +40,7 @@ export default function CustomersLayout({ children }: { children: React.ReactNod
         <PinGate
           unlockTitle={t.pin.unlockTitleOrders}
           sessionKey={UNLOCK_KEY}
+          scope="customers"
           onUnlocked={() => setUnlocked(true)}
         />
       </div>
@@ -48,10 +53,10 @@ export default function CustomersLayout({ children }: { children: React.ReactNod
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
-          // Server lock so a DevTools attacker on a freshly unattended tablet
-          // can't fire admin actions during the slack between idle-expire and
-          // the next PIN prompt.
-          void lockPin();
+          // Server lock for THIS scope only — leaving other scopes' (e.g.
+          // /settings) windows alone if the owner is mid-session there in
+          // another tab.
+          void lockPin("customers");
           setUnlocked(false);
         }}
       />

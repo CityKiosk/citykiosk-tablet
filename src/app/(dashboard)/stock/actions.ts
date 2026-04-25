@@ -55,7 +55,7 @@ export async function updateStock(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("stock");
   if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase

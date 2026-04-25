@@ -425,14 +425,14 @@ export type Database = {
     Functions: {
       next_order_number: { Args: never; Returns: string }
       has_admin_pin: { Args: never; Returns: boolean }
-      verify_admin_pin: { Args: { p_pin: string }; Returns: boolean }
+      verify_admin_pin: { Args: { p_pin: string; p_scope: string }; Returns: boolean }
       set_admin_pin: {
         Args: { p_current_pin: string | null; p_new_pin: string }
         Returns: boolean
       }
-      is_admin_pin_unlocked: { Args: never; Returns: boolean }
-      extend_admin_pin_unlock: { Args: never; Returns: void }
-      lock_admin_pin: { Args: never; Returns: void }
+      is_admin_pin_unlocked: { Args: { p_scope: string }; Returns: boolean }
+      extend_admin_pin_unlock: { Args: { p_scope: string }; Returns: void }
+      lock_admin_pin: { Args: { p_scope?: string | null }; Returns: void }
       update_display_field: {
         Args: { p_scope: string; p_key: string; p_value: boolean }
         Returns: void

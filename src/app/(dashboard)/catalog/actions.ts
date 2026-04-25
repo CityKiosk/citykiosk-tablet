@@ -61,7 +61,7 @@ export async function updateProduct(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet / Giriş yapılmamış" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("settings");
   if (gate) return { error: "PIN erforderlich / PIN gerekli" };
 
   const { error } = await supabase
@@ -101,7 +101,7 @@ export async function deleteProduct(productId: string): Promise<{ error?: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("settings");
   if (gate) return { error: "PIN erforderlich" };
 
   // Delete image from storage
@@ -160,7 +160,7 @@ export async function addCategory(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("settings");
   if (gate) return { error: "PIN erforderlich" };
 
   const { error } = await supabase.from("categories").insert({
@@ -259,7 +259,7 @@ export async function deleteCategory(categoryId: string): Promise<{ error?: stri
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("settings");
   if (gate) return { error: "PIN erforderlich" };
 
   // Check if any products use this category
@@ -359,7 +359,7 @@ export async function addProduct(input: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("settings");
   if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase

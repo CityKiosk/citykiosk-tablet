@@ -256,7 +256,7 @@ export async function deleteOrder(orderId: string): Promise<{ error?: string }> 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("orders");
   if (gate) return { error: "PIN erforderlich" };
 
   const { error } = await supabase
@@ -304,7 +304,7 @@ export async function fetchOrders(): Promise<{ data?: OrderRow[]; error?: string
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("orders");
   if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
@@ -337,7 +337,7 @@ export async function fetchOrderById(orderId: string): Promise<{ data?: OrderRow
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("orders");
   if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
@@ -378,6 +378,12 @@ export async function fetchCustomers(): Promise<{ data?: CustomerRow[]; error?: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
+  // Customer list = PII (other customers' shop names + first names visible
+  // to whoever is at the counter). Gate it with the same scope as /customers
+  // so a DevTools call without prior PIN entry is denied.
+  const gate = await requirePinUnlocked("customers");
+  if (gate) return { error: "PIN erforderlich" };
+
   const { data, error } = await supabase
     .from("customers")
     .select("id, first_name, last_name, shop_name")
@@ -405,7 +411,7 @@ export async function fetchCustomerStats(): Promise<{ data?: CustomerStatRow[]; 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
-  const gate = await requirePinUnlocked();
+  const gate = await requirePinUnlocked("customers");
   if (gate) return { error: "PIN erforderlich" };
 
   // Fetch customers

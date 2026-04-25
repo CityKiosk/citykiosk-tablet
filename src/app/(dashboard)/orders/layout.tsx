@@ -21,9 +21,9 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
       if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
     } catch {}
     setChecked(true);
-    // Lock on navigation away.
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      void lockPin("orders");
     };
   }, []);
 
@@ -38,6 +38,7 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
         <PinGate
           unlockTitle={t.pin.unlockTitleOrders}
           sessionKey={UNLOCK_KEY}
+          scope="orders"
           onUnlocked={() => setUnlocked(true)}
         />
       </div>
@@ -50,7 +51,7 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
-          void lockPin();
+          void lockPin("orders");
           setUnlocked(false);
         }}
       />

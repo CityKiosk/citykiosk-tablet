@@ -42,6 +42,7 @@ export function StockClient({ products: initialProducts, categories }: Props) {
     // A shared tablet must not stay unlocked behind the owner's back.
     return () => {
       try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
+      void lockPin("stock");
     };
   }, []);
 
@@ -131,6 +132,7 @@ export function StockClient({ products: initialProducts, categories }: Props) {
         <PinGate
           unlockTitle={t.pin.unlockTitleStock}
           sessionKey={UNLOCK_KEY}
+          scope="stock"
           onUnlocked={() => setUnlocked(true)}
         />
       </div>
@@ -143,7 +145,7 @@ export function StockClient({ products: initialProducts, categories }: Props) {
         timeoutMs={ADMIN_IDLE_LOCK_MS}
         onExpire={() => {
           try { sessionStorage.removeItem(UNLOCK_KEY); } catch {}
-          void lockPin();
+          void lockPin("stock");
           setUnlocked(false);
         }}
       />
