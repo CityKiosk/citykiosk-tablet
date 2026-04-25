@@ -5,6 +5,7 @@ import { requirePinUnlocked } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createOrderRateLimit } from "@/lib/rateLimit";
+import { DEFAULT_TAX_RATE, calculateTax } from "@/lib/tax";
 
 // ── Create Order ──
 const safeImageUrl = z.string().refine(
@@ -133,8 +134,9 @@ export async function createOrder(input: {
   const { data: orderNum } = await supabase.rpc("next_order_number");
   if (!orderNum) return { error: "Bestellnummer konnte nicht generiert werden" };
 
-  // Calculate total from verified prices
-  const total = data.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+  // Calculate net total from verified prices, then stamp VAT.
+  const net = Math.round(data.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 100) / 100;
+  const { tax, gross } = calculateTax(net, DEFAULT_TAX_RATE);
 
   // Create order
   const { data: order, error: orderErr } = await supabase
@@ -146,7 +148,10 @@ export async function createOrder(input: {
       customer_last_name: data.customer_last_name || null,
       customer_shop_name: data.customer_shop_name,
       order_number: orderNum,
-      total: Math.round(total * 100) / 100,
+      total: net,
+      tax_rate: DEFAULT_TAX_RATE,
+      tax_amount: tax,
+      gross_total: gross,
       notes: data.notes || null,
       status: "confirmed",
       idempotency_key: data.idempotency_key ?? null,
@@ -277,6 +282,9 @@ export type OrderRow = {
   customer_shop_name: string;
   status: string;
   total: number;
+  tax_rate: number;
+  tax_amount: number;
+  gross_total: number;
   notes: string | null;
   created_at: string;
   items: OrderItemRow[];
@@ -308,7 +316,7 @@ export async function fetchOrders(): Promise<{ data?: OrderRow[]; error?: string
     .select(`
       id, order_number, customer_id,
       customer_first_name, customer_last_name, customer_shop_name,
-      status, total, notes, created_at,
+      status, total, tax_rate, tax_amount, gross_total, notes, created_at,
       order_items (
         id, product_id, product_name_de, product_image_url,
         product_sku, product_description, quantity, unit_price, line_total, sort_order
@@ -341,7 +349,7 @@ export async function fetchOrderById(orderId: string): Promise<{ data?: OrderRow
     .select(`
       id, order_number, customer_id,
       customer_first_name, customer_last_name, customer_shop_name,
-      status, total, notes, created_at,
+      status, total, tax_rate, tax_amount, gross_total, notes, created_at,
       order_items (
         id, product_id, product_name_de, product_image_url,
         product_sku, product_description, quantity, unit_price, line_total, sort_order
@@ -420,10 +428,12 @@ export async function fetchCustomerStats(): Promise<{ data?: CustomerStatRow[]; 
 
   if (custErr) return { error: "Kunden konnten nicht geladen werden" };
 
-  // Fetch orders for stats
+  // Fetch orders for stats — use gross_total (incl. VAT) since that is the
+  // figure the customer actually paid. Legacy rows had gross_total backfilled
+  // from the old `total`, so they keep their historical amount.
   const { data: orders, error: ordErr } = await supabase
     .from("orders")
-    .select("customer_id, total, created_at")
+    .select("customer_id, gross_total, created_at")
     .eq("owner_id", user.id);
 
   if (ordErr) return { error: "Bestellungen konnten nicht geladen werden" };
@@ -434,7 +444,7 @@ export async function fetchCustomerStats(): Promise<{ data?: CustomerStatRow[]; 
     if (!o.customer_id) continue;
     const cur = statsMap.get(o.customer_id) ?? { orderCount: 0, totalSpent: 0, lastOrderAt: null };
     cur.orderCount += 1;
-    cur.totalSpent += o.total;
+    cur.totalSpent += o.gross_total;
     if (!cur.lastOrderAt || cur.lastOrderAt < o.created_at) cur.lastOrderAt = o.created_at;
     statsMap.set(o.customer_id, cur);
   }

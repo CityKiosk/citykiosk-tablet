@@ -30,6 +30,9 @@ function toExportOrder(o: OrderRow): Order {
       price: i.unit_price,
     })),
     total: o.total,
+    taxRate: o.tax_rate,
+    taxAmount: o.tax_amount,
+    grossTotal: o.gross_total,
     createdAt: o.created_at,
   };
 }
@@ -78,12 +81,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         const { data: { user } } = await supabase.auth.getUser();
         const email = user?.email || "";
         const subject = encodeURIComponent(
-          `${locale === "de" ? "Bestellung" : "Sipariş"} ${order.order_number} — ${order.customer_shop_name}`
+          `Bestellung ${order.order_number} — ${order.customer_shop_name}`
         );
         const body = encodeURIComponent(
-          locale === "de"
-            ? `Bestellung ${order.order_number}\nKunde: ${order.customer_shop_name}\nGesamt: ${order.total}\n\nPDF wurde heruntergeladen — bitte anhängen.`
-            : `Sipariş ${order.order_number}\nMüşteri: ${order.customer_shop_name}\nToplam: ${order.total}\n\nPDF indirildi — lütfen ekleyin.`
+          `Bestellung ${order.order_number}\nKunde: ${order.customer_shop_name}\nGesamt: ${order.gross_total}\n\nPDF wurde heruntergeladen — bitte anhängen.`
         );
         // Download PDF first, then open mailto
         await downloadOrderPdf(toExportOrder(order), locale);
@@ -159,8 +160,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 {t.order.total}
               </div>
               <div className="tabular text-3xl font-semibold text-slate-900 dark:text-slate-50 mt-1">
-                {formatPrice(order.total, locale)}
+                {formatPrice(order.gross_total)}
               </div>
+              {order.tax_rate > 0 && (
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 tabular text-right">
+                  {t.catalog.cartSubtotal} {formatPrice(order.total)} · {t.catalog.cartTaxLine(order.tax_rate)} {formatPrice(order.tax_amount)}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -180,7 +186,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 type="button"
                 onClick={handleShare}
                 disabled={sharing}
-                aria-label={locale === "de" ? "Teilen" : "Paylaş"}
+                aria-label="Teilen"
                 className="cursor-pointer inline-flex items-center justify-center w-10 h-10 rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 disabled:opacity-60 transition-colors"
               >
                 {sharing ? (
@@ -241,16 +247,36 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                   )}
                 </td>
                 <td className="tabular px-5 py-3 text-right text-slate-600 dark:text-slate-400">
-                  {formatPrice(i.unit_price, locale)}
+                  {formatPrice(i.unit_price)}
                 </td>
                 <td className="tabular px-5 py-3 text-right text-slate-700 dark:text-slate-300">{i.quantity}</td>
                 <td className="tabular px-5 py-3 text-right font-semibold text-slate-900 dark:text-slate-50">
-                  {formatPrice(i.line_total, locale)}
+                  {formatPrice(i.line_total)}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
+            {order.tax_rate > 0 && (
+              <>
+                <tr className="bg-slate-50 dark:bg-slate-900/50">
+                  <td className="px-5 py-2 text-right text-xs text-slate-500 dark:text-slate-400" colSpan={4}>
+                    {t.catalog.cartSubtotal}
+                  </td>
+                  <td className="tabular px-5 py-2 text-right text-xs text-slate-600 dark:text-slate-400">
+                    {formatPrice(order.total)}
+                  </td>
+                </tr>
+                <tr className="bg-slate-50 dark:bg-slate-900/50">
+                  <td className="px-5 py-2 text-right text-xs text-slate-500 dark:text-slate-400" colSpan={4}>
+                    {t.catalog.cartTaxLine(order.tax_rate)}
+                  </td>
+                  <td className="tabular px-5 py-2 text-right text-xs text-slate-600 dark:text-slate-400">
+                    {formatPrice(order.tax_amount)}
+                  </td>
+                </tr>
+              </>
+            )}
             <tr className="bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
               <td className="px-5 py-3" colSpan={4}>
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -258,7 +284,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                 </span>
               </td>
               <td className="tabular px-5 py-3 text-right text-base font-semibold text-slate-900 dark:text-slate-50">
-                {formatPrice(order.total, locale)}
+                {formatPrice(order.gross_total)}
               </td>
             </tr>
           </tfoot>
@@ -289,22 +315,34 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                   <div className="text-[10px] text-slate-400 dark:text-slate-500">Art.-Nr. {i.product_sku}</div>
                 )}
                 <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="tabular">{formatPrice(i.unit_price, locale)}</span>
+                  <span className="tabular">{formatPrice(i.unit_price)}</span>
                   <span>×</span>
                   <span className="tabular font-medium text-slate-700 dark:text-slate-300">{i.quantity}</span>
                 </div>
                 <div className="tabular text-sm font-semibold text-sky-700 dark:text-sky-400 mt-1">
-                  {formatPrice(i.line_total, locale)}
+                  {formatPrice(i.line_total)}
                 </div>
               </div>
             </li>
           ))}
-          <li className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/50">
+          {order.tax_rate > 0 && (
+            <>
+              <li className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 dark:text-slate-400">
+                <span>{t.catalog.cartSubtotal}</span>
+                <span className="tabular">{formatPrice(order.total)}</span>
+              </li>
+              <li className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 dark:text-slate-400">
+                <span>{t.catalog.cartTaxLine(order.tax_rate)}</span>
+                <span className="tabular">{formatPrice(order.tax_amount)}</span>
+              </li>
+            </>
+          )}
+          <li className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t.order.total}
             </span>
             <span className="tabular text-base font-semibold text-slate-900 dark:text-slate-50">
-              {formatPrice(order.total, locale)}
+              {formatPrice(order.gross_total)}
             </span>
           </li>
         </ul>

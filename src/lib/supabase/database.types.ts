@@ -233,12 +233,15 @@ export type Database = {
           customer_id: string | null
           customer_last_name: string | null
           customer_shop_name: string
+          gross_total: number
           id: string
           idempotency_key: string | null
           notes: string | null
           order_number: string
           owner_id: string
           status: string
+          tax_amount: number
+          tax_rate: number
           total: number
           updated_at: string
         }
@@ -248,12 +251,15 @@ export type Database = {
           customer_id?: string | null
           customer_last_name?: string | null
           customer_shop_name: string
+          gross_total?: number
           id?: string
           idempotency_key?: string | null
           notes?: string | null
           order_number: string
           owner_id?: string
           status?: string
+          tax_amount?: number
+          tax_rate?: number
           total: number
           updated_at?: string
         }
@@ -263,12 +269,15 @@ export type Database = {
           customer_id?: string | null
           customer_last_name?: string | null
           customer_shop_name?: string
+          gross_total?: number
           id?: string
           idempotency_key?: string | null
           notes?: string | null
           order_number?: string
           owner_id?: string
           status?: string
+          tax_amount?: number
+          tax_rate?: number
           total?: number
           updated_at?: string
         }

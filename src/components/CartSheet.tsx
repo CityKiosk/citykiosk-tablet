@@ -12,6 +12,7 @@ import {
   type CartProduct,
 } from "@/app/(dashboard)/catalog/actions";
 import { lockBodyScroll } from "@/lib/scrollLock";
+import { DEFAULT_TAX_RATE, calculateTax } from "@/lib/tax";
 
 export default function CartSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
@@ -215,27 +216,43 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
             )}
           </div>
 
-          {items.length > 0 && (
-            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-t-2xl">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                    {t.catalog.cartTotal}
+          {items.length > 0 && (() => {
+            // Net = item total before VAT; gross = what the customer pays.
+            // Computed client-side for the cart preview; the server stamps
+            // the authoritative amount on createOrder.
+            const { tax, gross } = calculateTax(total, DEFAULT_TAX_RATE);
+            return (
+              <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-t-2xl">
+                <dl className="space-y-1 mb-3 text-sm">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <dt>{t.catalog.cartSubtotal}</dt>
+                    <dd className="tabular">{formatPrice(total)}</dd>
                   </div>
-                  <div className="tabular text-xl font-semibold text-slate-900 dark:text-slate-50">
-                    {formatPrice(total)}
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <dt>{t.catalog.cartTaxLine(DEFAULT_TAX_RATE)}</dt>
+                    <dd className="tabular">{formatPrice(tax)}</dd>
                   </div>
+                </dl>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
+                      {t.catalog.cartTotal}
+                    </div>
+                    <div className="tabular text-xl font-semibold text-slate-900 dark:text-slate-50">
+                      {formatPrice(gross)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOrderOpen(true)}
+                    className="cursor-pointer h-12 px-6 bg-sky-700 hover:bg-sky-800 text-white rounded-xl font-semibold text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
+                  >
+                    {t.catalog.createOrder}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOrderOpen(true)}
-                  className="cursor-pointer h-12 px-6 bg-sky-700 hover:bg-sky-800 text-white rounded-xl font-semibold text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
-                >
-                  {t.catalog.createOrder}
-                </button>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 

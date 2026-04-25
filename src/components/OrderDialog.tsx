@@ -7,6 +7,7 @@ import PinPad from "./PinPad";
 import { useI18n } from "./I18nProvider";
 import { OrderItem } from "@/lib/types";
 import { formatPrice } from "@/lib/i18n";
+import { DEFAULT_TAX_RATE, calculateTax } from "@/lib/tax";
 import { useToast } from "./Toast";
 import {
   createOrder,
@@ -39,7 +40,7 @@ export default function OrderDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const toast = useToast();
   const router = useRouter();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
@@ -81,8 +82,8 @@ export default function OrderDialog({
   }
 
   const sortedCustomers = useMemo(
-    () => [...customers].sort((a, b) => a.shop_name.localeCompare(b.shop_name, locale)),
-    [customers, locale]
+    () => [...customers].sort((a, b) => a.shop_name.localeCompare(b.shop_name, "de")),
+    [customers]
   );
   const [mode, setMode] = useState<"select" | "new">("new");
   const [selectedId, setSelectedId] = useState<string>("");
@@ -161,9 +162,7 @@ export default function OrderDialog({
           // If offline or server error, queue for retry
           if (!navigator.onLine) {
             addPendingOrder(orderPayload);
-            toast.show(locale === "de"
-              ? "Offline — Bestellung wird gesendet, sobald Sie wieder online sind"
-              : "Çevrimdışı — bağlantı geldiğinde sipariş gönderilecek");
+            toast.show("Offline — Bestellung wird gesendet, sobald Sie wieder online sind");
             onSaved();
             return;
           }
@@ -177,9 +176,7 @@ export default function OrderDialog({
       } catch {
         // Network error — queue for retry
         addPendingOrder(orderPayload);
-        toast.show(locale === "de"
-          ? "Offline — Bestellung wird gesendet, sobald Sie wieder online sind"
-          : "Çevrimdışı — bağlantı geldiğinde sipariş gönderilecek");
+        toast.show("Offline — Bestellung wird gesendet, sobald Sie wieder online sind");
         onSaved();
       }
     });
@@ -337,17 +334,32 @@ export default function OrderDialog({
                   )}
                 </div>
                 <div className="tabular text-slate-900 dark:text-slate-100 font-medium flex-shrink-0">
-                  {formatPrice(i.price * i.quantity, locale)}
+                  {formatPrice(i.price * i.quantity)}
                 </div>
               </li>
             ))}
           </ul>
-          <div className="flex justify-between items-baseline mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.order.total}</span>
-            <span className="tabular text-xl font-semibold text-slate-900 dark:text-slate-50">
-              {formatPrice(total, locale)}
-            </span>
-          </div>
+          {(() => {
+            const { tax, gross } = calculateTax(total, DEFAULT_TAX_RATE);
+            return (
+              <dl className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                  <dt>{t.catalog.cartSubtotal}</dt>
+                  <dd className="tabular">{formatPrice(total)}</dd>
+                </div>
+                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                  <dt>{t.catalog.cartTaxLine(DEFAULT_TAX_RATE)}</dt>
+                  <dd className="tabular">{formatPrice(tax)}</dd>
+                </div>
+                <div className="flex justify-between items-baseline pt-1">
+                  <dt className="text-sm font-medium text-slate-600 dark:text-slate-400">{t.order.total}</dt>
+                  <dd className="tabular text-xl font-semibold text-slate-900 dark:text-slate-50">
+                    {formatPrice(gross)}
+                  </dd>
+                </div>
+              </dl>
+            );
+          })()}
         </div>
       </form>
       <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 rounded-b-2xl flex justify-end gap-2">

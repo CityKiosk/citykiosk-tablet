@@ -135,13 +135,27 @@ export async function previewOrderPdf(order: Order, locale: Locale): Promise<voi
 
   type DocWithLastTable = typeof doc & { lastAutoTable?: { finalY: number } };
   const finalY = (doc as DocWithLastTable).lastAutoTable?.finalY ?? 60;
-  const labelGross = locale === "de" ? "Gesamt" : "Toplam";
+  const labelGross = "Gesamt";
 
-  const y = finalY + 10;
+  let y = finalY + 8;
+  // Net + VAT breakdown for orders that carry a tax rate (legacy orders
+  // have taxRate=0; collapse to a single line in that case).
+  if (order.taxRate > 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Zwischensumme", 140, y);
+    doc.text(formatPrice(order.total), 196, y, { align: "right" });
+    y += 5;
+    doc.text(`MwSt ${order.taxRate}%`, 140, y);
+    doc.text(formatPrice(order.taxAmount), 196, y, { align: "right" });
+    y += 7;
+  } else {
+    y += 2;
+  }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.text(labelGross, 140, y);
-  doc.text(formatPrice(order.total, locale), 196, y, { align: "right" });
+  doc.text(formatPrice(order.grossTotal), 196, y, { align: "right" });
 
   const fileName = `${safeFileBase(order, locale)}.pdf`;
   const blob = doc.output("blob");
@@ -256,12 +270,23 @@ export async function generateOrderPdfFile(order: Order, locale: Locale): Promis
 
   type DocWithLastTable = typeof doc & { lastAutoTable?: { finalY: number } };
   const finalY = (doc as DocWithLastTable).lastAutoTable?.finalY ?? 60;
-  const labelGross = locale === "de" ? "Gesamt" : "Toplam";
-  const y = finalY + 10;
+  let y = finalY + 8;
+  if (order.taxRate > 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Zwischensumme", 140, y);
+    doc.text(formatPrice(order.total), 196, y, { align: "right" });
+    y += 5;
+    doc.text(`MwSt ${order.taxRate}%`, 140, y);
+    doc.text(formatPrice(order.taxAmount), 196, y, { align: "right" });
+    y += 7;
+  } else {
+    y += 2;
+  }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.text(labelGross, 140, y);
-  doc.text(formatPrice(order.total, locale), 196, y, { align: "right" });
+  doc.text("Gesamt", 140, y);
+  doc.text(formatPrice(order.grossTotal), 196, y, { align: "right" });
 
   const fileName = `${safeFileBase(order, locale)}.pdf`;
   const blob = doc.output("blob");

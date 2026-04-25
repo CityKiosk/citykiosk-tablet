@@ -145,7 +145,7 @@ export default function OrdersPage() {
                       {o.items.length}
                     </td>
                     <td className="tabular px-5 py-3.5 text-right font-semibold text-slate-900 dark:text-slate-50">
-                      {formatPrice(o.total, locale)}
+                      {formatPrice(o.gross_total)}
                     </td>
                     <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400">
                       {formatDateTime(o.created_at, locale)}
@@ -192,7 +192,7 @@ export default function OrdersPage() {
                       </div>
                     </div>
                     <div className="tabular text-sm font-semibold text-slate-900 dark:text-slate-50">
-                      {formatPrice(o.total, locale)}
+                      {formatPrice(o.gross_total)}
                     </div>
                   </Link>
                 </li>

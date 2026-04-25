@@ -35,6 +35,9 @@ type LocaleDict = {
     qty: (n: string) => string;
     cartCount: (n: number, kinds: number) => string;
     cartTotal: string;
+    cartSubtotal: string;
+    /** "MwSt 19%" — VAT line label. Pass the rate to render the percent. */
+    cartTaxLine: (rate: number) => string;
     createOrder: string;
     cartLive: (n: number, t: string) => string;
     cartEmpty: string;
@@ -326,6 +329,8 @@ export const dict: Record<Locale, LocaleDict> = {
       qty: (n: string) => `Stück von ${n}`,
       cartCount: (n: number, kinds: number) => `${n} Artikel (${kinds} Sorten)`,
       cartTotal: "Gesamt",
+      cartSubtotal: "Zwischensumme",
+      cartTaxLine: (rate: number) => `MwSt ${rate}%`,
       createOrder: "Bestellung erstellen",
       cartLive: (n: number, t: string) => `${n} Artikel im Warenkorb, gesamt ${t}`,
       cartEmpty: "Warenkorb ist leer",
