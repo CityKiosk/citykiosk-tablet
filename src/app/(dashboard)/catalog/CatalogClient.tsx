@@ -117,7 +117,9 @@ export function CatalogClient({
   }, [loadMore, hasMore, visibleCount]);
 
   return (
-    <div>
+    // pb-28 leaves room for the fixed Warenkorb FAB (h-14 + ~1.25rem offset
+    // ≈ 5rem) so the last grid row's qty controls aren't hidden behind it.
+    <div className="pb-28">
       <PageHeader title={t.catalog.title} subtitle={t.catalog.subtitle} />
 
       {/* Filter bar */}
