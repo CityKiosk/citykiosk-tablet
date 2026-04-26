@@ -1,1 +1,1 @@
-(function(){try{var t=localStorage.getItem("souvenir_theme")||"system";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark")}catch(e){}})()
+(function(){try{var p=location.pathname.indexOf("/v/")===0;var t=p?"system":(localStorage.getItem("souvenir_theme")||"system");var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark")}catch(e){}})()
