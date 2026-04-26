@@ -75,7 +75,7 @@ function BrowseCardImpl({ product, category: _category }: { product: Product; ca
           src={product.image}
           alt={name}
           loading="eager"
-          className="w-full h-full object-cover"
+          className="max-w-full max-h-full object-contain"
         />
       </div>
       <div className="flex-shrink-0 px-3 py-2 text-center">

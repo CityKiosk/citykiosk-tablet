@@ -78,7 +78,7 @@ function CardImpl({ product, displayFields }: { product: Product; displayFields:
             src={product.image_url}
             alt={name}
             loading="eager"
-            className="w-full h-full object-cover"
+            className="max-w-full max-h-full object-contain"
           />
         )}
       </div>
