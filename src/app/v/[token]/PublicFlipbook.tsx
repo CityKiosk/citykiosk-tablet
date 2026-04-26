@@ -70,15 +70,15 @@ function CardImpl({ product, displayFields }: { product: Product; displayFields:
   const showMeta = showDimensions || showPackaging;
 
   return (
-    <article className="h-full flex flex-col rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card">
-      <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 overflow-hidden p-1">
+    <article className="h-full flex flex-col rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card p-2">
+      <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 overflow-hidden rounded-lg">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {product.image_url && (
           <img
             src={product.image_url}
             alt={name}
             loading="eager"
-            className="max-w-full max-h-full object-contain"
+            className="w-full h-full object-cover"
           />
         )}
       </div>
