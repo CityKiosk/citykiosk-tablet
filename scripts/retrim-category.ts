@@ -49,21 +49,18 @@ function stem(filename: string): string {
   return filename.replace(/\.[^.]+$/, "").trim();
 }
 
-// Find the source folder matching the category (with possible " PNG" suffix)
+// Find the source folder matching the category (with possible " PNG" suffix).
+// Normalizes both sides to NFC — macOS stores filenames as NFD.
 async function findSourceFolder(): Promise<string> {
   const entries = await readdir(ROOT, { withFileTypes: true });
-  const candidates = [
-    CATEGORY,
-    `${CATEGORY} PNG`,
-    `${CATEGORY.toUpperCase()} PNG`,
-  ];
+  const cat = CATEGORY.normalize("NFC");
+  const candidates = [cat, `${cat} PNG`, `${cat.toUpperCase()} PNG`];
   for (const c of candidates) {
-    const found = entries.find((e) => e.isDirectory() && e.name === c);
+    const found = entries.find((e) => e.isDirectory() && e.name.normalize("NFC") === c);
     if (found) return path.join(ROOT, found.name);
   }
-  // Fuzzy: any folder whose stripped name == category
   const fuzzy = entries.find(
-    (e) => e.isDirectory() && e.name.replace(/\s*PNG\s*$/i, "").trim() === CATEGORY
+    (e) => e.isDirectory() && e.name.normalize("NFC").replace(/\s*PNG\s*$/i, "").trim() === cat
   );
   if (fuzzy) return path.join(ROOT, fuzzy.name);
   throw new Error(`No source folder found for category "${CATEGORY}" in ${ROOT}`);
