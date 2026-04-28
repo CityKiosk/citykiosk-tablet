@@ -13,23 +13,28 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/catalog";
 
+  // Behind Render's proxy, request.url's origin can resolve to the internal
+  // host (localhost:10000). Use NEXT_PUBLIC_SITE_URL as the public origin.
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${baseUrl}/login?error=missing_code`);
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+    return NextResponse.redirect(`${baseUrl}/login?error=auth_callback_failed`);
   }
 
   // Safe redirect — only allow internal paths
   const safeNext =
     next.startsWith("/") && !next.startsWith("//") ? next : "/catalog";
-  return NextResponse.redirect(`${origin}${safeNext}`);
+  return NextResponse.redirect(`${baseUrl}${safeNext}`);
 }
