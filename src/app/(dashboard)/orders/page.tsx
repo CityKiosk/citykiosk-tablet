@@ -17,6 +17,13 @@ import {
   CalendarIcon,
 } from "@/components/icons";
 import { fetchOrders, deleteOrder, type OrderRow } from "./actions";
+import DateRangePicker from "@/components/DateRangePicker";
+import {
+  presetRange,
+  isPresetActive,
+  type Preset,
+  type DateRangeIso,
+} from "@/lib/dateRange";
 
 type Filters = {
   search: string;
@@ -32,49 +39,8 @@ const EMPTY_FILTERS: Filters = {
   customerId: "",
 };
 
-type Preset = "today" | "thisWeek" | "thisMonth" | "lastMonth";
-
-// All preset ranges are inclusive on both ends. ISO YYYY-MM-DD strings so they
-// compare lexicographically against created_at.slice(0, 10).
-function presetRange(preset: Preset): { from: string; to: string } {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const d = now.getDate();
-  const iso = (yr: number, mo: number, da: number) =>
-    `${yr.toString().padStart(4, "0")}-${(mo + 1).toString().padStart(2, "0")}-${da
-      .toString()
-      .padStart(2, "0")}`;
-
-  if (preset === "today") {
-    const today = iso(y, m, d);
-    return { from: today, to: today };
-  }
-  if (preset === "thisWeek") {
-    // Monday-based week (de-DE convention).
-    const day = (now.getDay() + 6) % 7; // 0 = Mon
-    const start = new Date(y, m, d - day);
-    return {
-      from: iso(start.getFullYear(), start.getMonth(), start.getDate()),
-      to: iso(y, m, d),
-    };
-  }
-  if (preset === "thisMonth") {
-    return { from: iso(y, m, 1), to: iso(y, m, d) };
-  }
-  // lastMonth — full previous calendar month
-  const startPrev = new Date(y, m - 1, 1);
-  const endPrev = new Date(y, m, 0); // day 0 of current = last day of prev
-  return {
-    from: iso(startPrev.getFullYear(), startPrev.getMonth(), startPrev.getDate()),
-    to: iso(endPrev.getFullYear(), endPrev.getMonth(), endPrev.getDate()),
-  };
-}
-
-function isPresetActive(preset: Preset, f: Filters): boolean {
-  if (!f.dateFrom || !f.dateTo) return false;
-  const range = presetRange(preset);
-  return f.dateFrom === range.from && f.dateTo === range.to;
+function rangeFromFilters(f: Filters): DateRangeIso {
+  return { from: f.dateFrom, to: f.dateTo };
 }
 
 export default function OrdersPage() {
@@ -270,33 +236,23 @@ export default function OrdersPage() {
             />
           </div>
 
-          {/* Row 2: date range + customer */}
+          {/* Row 2: date range picker + customer */}
           <div className="flex flex-col md:flex-row md:items-end gap-3">
-            <div className="flex-1 grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  {t.orders.filters.dateFrom}
-                </span>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  max={filters.dateTo || undefined}
-                  onChange={(e) => update("dateFrom", e.target.value)}
-                  className={inputCls}
-                />
-              </label>
-              <label className="block">
-                <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  {t.orders.filters.dateTo}
-                </span>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  min={filters.dateFrom || undefined}
-                  onChange={(e) => update("dateTo", e.target.value)}
-                  className={inputCls}
-                />
-              </label>
+            <div className="flex-1">
+              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                {t.orders.filters.dateFrom} – {t.orders.filters.dateTo}
+              </span>
+              <DateRangePicker
+                value={rangeFromFilters(filters)}
+                onChange={(next) =>
+                  setFilters((prev) => ({ ...prev, dateFrom: next.from, dateTo: next.to }))
+                }
+                placeholder={t.orders.filters.pickerPlaceholder}
+                todayLabel={t.orders.filters.pickerToday}
+                clearLabel={t.orders.filters.pickerClear}
+                applyLabel={t.orders.filters.pickerApply}
+                ariaLabel={t.orders.filters.pickerAriaLabel}
+              />
             </div>
             <label className="block flex-1 md:max-w-xs">
               <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
@@ -320,7 +276,7 @@ export default function OrdersPage() {
           {/* Preset chips */}
           <div className="flex flex-wrap gap-2">
             {presets.map((p) => {
-              const active = isPresetActive(p, filters);
+              const active = isPresetActive(p, rangeFromFilters(filters));
               return (
                 <button
                   key={p}
