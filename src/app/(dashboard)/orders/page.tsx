@@ -17,7 +17,7 @@ import {
   CalendarIcon,
 } from "@/components/icons";
 import { fetchOrders, deleteOrder, type OrderRow } from "./actions";
-import DateRangePicker from "@/components/DateRangePicker";
+import DatePicker from "@/components/DatePicker";
 import {
   presetRange,
   isPresetActive,
@@ -236,23 +236,40 @@ export default function OrdersPage() {
             />
           </div>
 
-          {/* Row 2: date range picker + customer */}
+          {/* Row 2: two single-date pickers (Von / Bis) + customer.
+              Two pickers instead of a range picker so non-technical users
+              can pick each date independently — same mental model as native
+              date inputs but with a styled calendar. */}
           <div className="flex flex-col md:flex-row md:items-end gap-3">
-            <div className="flex-1">
-              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                {t.orders.filters.dateFrom} – {t.orders.filters.dateTo}
-              </span>
-              <DateRangePicker
-                value={rangeFromFilters(filters)}
-                onChange={(next) =>
-                  setFilters((prev) => ({ ...prev, dateFrom: next.from, dateTo: next.to }))
-                }
-                placeholder={t.orders.filters.pickerPlaceholder}
-                todayLabel={t.orders.filters.pickerToday}
-                clearLabel={t.orders.filters.pickerClear}
-                applyLabel={t.orders.filters.pickerApply}
-                ariaLabel={t.orders.filters.pickerAriaLabel}
-              />
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              <div>
+                <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t.orders.filters.dateFrom}
+                </span>
+                <DatePicker
+                  value={filters.dateFrom}
+                  onChange={(next) => update("dateFrom", next)}
+                  max={filters.dateTo}
+                  placeholder={t.orders.filters.dateFrom}
+                  todayLabel={t.orders.filters.pickerToday}
+                  clearLabel={t.orders.filters.pickerClear}
+                  ariaLabel={t.orders.filters.dateFrom}
+                />
+              </div>
+              <div>
+                <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t.orders.filters.dateTo}
+                </span>
+                <DatePicker
+                  value={filters.dateTo}
+                  onChange={(next) => update("dateTo", next)}
+                  min={filters.dateFrom}
+                  placeholder={t.orders.filters.dateTo}
+                  todayLabel={t.orders.filters.pickerToday}
+                  clearLabel={t.orders.filters.pickerClear}
+                  ariaLabel={t.orders.filters.dateTo}
+                />
+              </div>
             </div>
             <label className="block flex-1 md:max-w-xs">
               <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">

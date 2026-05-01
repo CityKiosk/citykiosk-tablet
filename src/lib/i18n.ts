@@ -162,11 +162,8 @@ type LocaleDict = {
       summaryCount: (n: number) => string;
       summaryTotal: string;
       summarySubset: (shown: number, total: number) => string;
-      pickerPlaceholder: string;
       pickerToday: string;
       pickerClear: string;
-      pickerApply: string;
-      pickerAriaLabel: string;
     };
   };
   product: { artNr: string; pack: (n: number) => string; required: string; dimensions: string };
@@ -474,11 +471,8 @@ export const dict: Record<Locale, LocaleDict> = {
         summaryCount: (n: number) => `${n} ${n === 1 ? "Bestellung" : "Bestellungen"}`,
         summaryTotal: "Gesamt",
         summarySubset: (shown: number, total: number) => `${shown} von ${total}`,
-        pickerPlaceholder: "Zeitraum wählen",
         pickerToday: "Heute",
         pickerClear: "Löschen",
-        pickerApply: "Anwenden",
-        pickerAriaLabel: "Zeitraum auswählen",
       },
     },
     product: {
