@@ -433,7 +433,7 @@ export const dict: Record<Locale, LocaleDict> = {
       detailTitle: "Bestelldetails",
       lineUnit: "Einzelpreis",
       lineQty: "Stück",
-      lineSubtotal: "Zwischensumme",
+      lineSubtotal: "Zwischensumme (netto)",
     },
     product: {
       artNr: "Art.-Nr.",
