@@ -145,6 +145,21 @@ type LocaleDict = {
     lineUnit: string;
     lineQty: string;
     lineSubtotal: string;
+    filters: {
+      dateFrom: string;
+      dateTo: string;
+      customerAll: string;
+      customerLabel: string;
+      today: string;
+      thisWeek: string;
+      thisMonth: string;
+      lastMonth: string;
+      resetAll: string;
+      noMatchFiltered: string;
+      activeCount: (n: number, total: number) => string;
+      removeDateRange: string;
+      removeCustomer: string;
+    };
   };
   product: { artNr: string; pack: (n: number) => string; required: string; dimensions: string };
   browse: {
@@ -434,6 +449,21 @@ export const dict: Record<Locale, LocaleDict> = {
       lineUnit: "Einzelpreis",
       lineQty: "Stück",
       lineSubtotal: "Zwischensumme (netto)",
+      filters: {
+        dateFrom: "Von",
+        dateTo: "Bis",
+        customerAll: "Alle Kunden",
+        customerLabel: "Kunde",
+        today: "Heute",
+        thisWeek: "Diese Woche",
+        thisMonth: "Dieser Monat",
+        lastMonth: "Letzter Monat",
+        resetAll: "Filter zurücksetzen",
+        noMatchFiltered: "Keine Bestellungen für die aktiven Filter.",
+        activeCount: (n: number, total: number) => `${n} von ${total} Bestellungen`,
+        removeDateRange: "Zeitraum entfernen",
+        removeCustomer: "Kundenfilter entfernen",
+      },
     },
     product: {
       artNr: "Art.-Nr.",

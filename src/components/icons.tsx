@@ -86,6 +86,13 @@ export const ArrowUpIcon = base(<path d="M12 19V5M5 12l7-7 7 7" />);
 export const ArrowRightIcon = base(<path d="M5 12h14M12 5l7 7-7 7" />);
 export const ChevronRightIcon = base(<path d="m9 18 6-6-6-6" />);
 export const ChevronLeftIcon = base(<path d="m15 18-6-6 6-6" />);
+export const ChevronDownIcon = base(<path d="m6 9 6 6 6-6" />);
+export const CalendarIcon = base(
+  <>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </>
+);
 export const PencilIcon = base(
   <>
     <path d="M21.17 6.42a2.83 2.83 0 0 0-4-4L3 16.58V21h4.42Z" />

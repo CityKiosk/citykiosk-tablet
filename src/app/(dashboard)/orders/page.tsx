@@ -1,21 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { formatDateTime, formatPrice } from "@/lib/i18n";
 import { useToast } from "@/components/Toast";
 import { useI18n } from "@/components/I18nProvider";
 import EmptyState from "@/components/EmptyState";
 import PageHeader from "@/components/PageHeader";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { ReceiptIcon, SearchIcon, ChevronRightIcon, Trash2Icon } from "@/components/icons";
+import {
+  ReceiptIcon,
+  SearchIcon,
+  ChevronRightIcon,
+  Trash2Icon,
+  XIcon,
+  CalendarIcon,
+} from "@/components/icons";
 import { fetchOrders, deleteOrder, type OrderRow } from "./actions";
+
+type Filters = {
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+  customerId: string;
+};
+
+const EMPTY_FILTERS: Filters = {
+  search: "",
+  dateFrom: "",
+  dateTo: "",
+  customerId: "",
+};
+
+type Preset = "today" | "thisWeek" | "thisMonth" | "lastMonth";
+
+// All preset ranges are inclusive on both ends. ISO YYYY-MM-DD strings so they
+// compare lexicographically against created_at.slice(0, 10).
+function presetRange(preset: Preset): { from: string; to: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+  const iso = (yr: number, mo: number, da: number) =>
+    `${yr.toString().padStart(4, "0")}-${(mo + 1).toString().padStart(2, "0")}-${da
+      .toString()
+      .padStart(2, "0")}`;
+
+  if (preset === "today") {
+    const today = iso(y, m, d);
+    return { from: today, to: today };
+  }
+  if (preset === "thisWeek") {
+    // Monday-based week (de-DE convention).
+    const day = (now.getDay() + 6) % 7; // 0 = Mon
+    const start = new Date(y, m, d - day);
+    return {
+      from: iso(start.getFullYear(), start.getMonth(), start.getDate()),
+      to: iso(y, m, d),
+    };
+  }
+  if (preset === "thisMonth") {
+    return { from: iso(y, m, 1), to: iso(y, m, d) };
+  }
+  // lastMonth — full previous calendar month
+  const startPrev = new Date(y, m - 1, 1);
+  const endPrev = new Date(y, m, 0); // day 0 of current = last day of prev
+  return {
+    from: iso(startPrev.getFullYear(), startPrev.getMonth(), startPrev.getDate()),
+    to: iso(endPrev.getFullYear(), endPrev.getMonth(), endPrev.getDate()),
+  };
+}
+
+function isPresetActive(preset: Preset, f: Filters): boolean {
+  if (!f.dateFrom || !f.dateTo) return false;
+  const range = presetRange(preset);
+  return f.dateFrom === range.from && f.dateTo === range.to;
+}
 
 export default function OrdersPage() {
   const { t, locale } = useI18n();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [confirmDel, setConfirmDel] = useState<OrderRow | null>(null);
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
@@ -27,17 +93,72 @@ export default function OrdersPage() {
     });
   }, []);
 
+  // Defer the freetext search so typing doesn't block the table re-render on
+  // 1000-row lists. Date / customer changes are single-tap and don't need it.
+  const deferredSearch = useDeferredValue(filters.search);
+
+  // Customer options derived from orders — only customers that actually have
+  // orders are filterable. Sorted by shop name (German collation).
+  const customerOptions = useMemo(() => {
+    const seen = new Map<string, { id: string; label: string }>();
+    for (const o of orders) {
+      if (!o.customer_id || seen.has(o.customer_id)) continue;
+      const personName = [o.customer_first_name, o.customer_last_name]
+        .filter(Boolean)
+        .join(" ");
+      const label = personName
+        ? `${o.customer_shop_name} — ${personName}`
+        : o.customer_shop_name;
+      seen.set(o.customer_id, { id: o.customer_id, label });
+    }
+    return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, "de"));
+  }, [orders]);
+
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter(
-      (o) =>
-        o.customer_shop_name.toLowerCase().includes(q) ||
-        o.customer_first_name.toLowerCase().includes(q) ||
-        (o.customer_last_name?.toLowerCase().includes(q) ?? false) ||
-        o.order_number.toLowerCase().includes(q)
-    );
-  }, [orders, search]);
+    const q = deferredSearch.trim().toLowerCase();
+    return orders.filter((o) => {
+      if (q) {
+        const hit =
+          o.customer_shop_name.toLowerCase().includes(q) ||
+          o.customer_first_name.toLowerCase().includes(q) ||
+          (o.customer_last_name?.toLowerCase().includes(q) ?? false) ||
+          o.order_number.toLowerCase().includes(q);
+        if (!hit) return false;
+      }
+      if (filters.customerId && o.customer_id !== filters.customerId) return false;
+      if (filters.dateFrom || filters.dateTo) {
+        const day = o.created_at.slice(0, 10);
+        if (filters.dateFrom && day < filters.dateFrom) return false;
+        if (filters.dateTo && day > filters.dateTo) return false;
+      }
+      return true;
+    });
+  }, [orders, deferredSearch, filters.customerId, filters.dateFrom, filters.dateTo]);
+
+  const activeFilterCount =
+    (filters.dateFrom || filters.dateTo ? 1 : 0) + (filters.customerId ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0;
+
+  function update<K extends keyof Filters>(key: K, value: Filters[K]) {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function applyPreset(preset: Preset) {
+    const range = presetRange(preset);
+    setFilters((prev) => ({ ...prev, dateFrom: range.from, dateTo: range.to }));
+  }
+
+  function clearDateRange() {
+    setFilters((prev) => ({ ...prev, dateFrom: "", dateTo: "" }));
+  }
+
+  function clearCustomer() {
+    setFilters((prev) => ({ ...prev, customerId: "" }));
+  }
+
+  function clearAll() {
+    setFilters(EMPTY_FILTERS);
+  }
 
   function handleDelete(o: OrderRow) {
     startTransition(async () => {
@@ -54,6 +175,26 @@ export default function OrdersPage() {
 
   const customerDisplay = (o: OrderRow) =>
     o.customer_first_name + (o.customer_last_name ? ` ${o.customer_last_name}` : "");
+
+  const selectedCustomerLabel = filters.customerId
+    ? customerOptions.find((c) => c.id === filters.customerId)?.label
+    : null;
+
+  // Friendly label for the active date-range chip — locale-aware short format.
+  function formatDateChip(iso: string): string {
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y.slice(2)}`;
+  }
+  const dateChipLabel =
+    filters.dateFrom && filters.dateTo
+      ? filters.dateFrom === filters.dateTo
+        ? formatDateChip(filters.dateFrom)
+        : `${formatDateChip(filters.dateFrom)} – ${formatDateChip(filters.dateTo)}`
+      : filters.dateFrom
+      ? `≥ ${formatDateChip(filters.dateFrom)}`
+      : filters.dateTo
+      ? `≤ ${formatDateChip(filters.dateTo)}`
+      : null;
 
   if (!loaded) {
     return (
@@ -86,12 +227,22 @@ export default function OrdersPage() {
     );
   }
 
+  const headerCount = hasActiveFilters || deferredSearch.trim()
+    ? t.orders.filters.activeCount(filtered.length, orders.length)
+    : `${orders.length}`;
+
+  const presets: Preset[] = ["today", "thisWeek", "thisMonth", "lastMonth"];
+  const inputCls =
+    "w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60";
+
   return (
     <div>
-      <PageHeader title={`${t.orders.listTitle} (${orders.length})`} />
+      <PageHeader title={`${t.orders.listTitle} (${headerCount})`} />
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+        {/* Filter bar */}
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 space-y-3">
+          {/* Row 1: search */}
           <div className="relative">
             <SearchIcon
               width={18}
@@ -105,16 +256,134 @@ export default function OrdersPage() {
               id="orders-search"
               type="search"
               placeholder={t.orders.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={filters.search}
+              onChange={(e) => update("search", e.target.value)}
               className="w-full h-10 pl-10 pr-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
             />
           </div>
+
+          {/* Row 2: date range + customer */}
+          <div className="flex flex-col md:flex-row md:items-end gap-3">
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t.orders.filters.dateFrom}
+                </span>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  max={filters.dateTo || undefined}
+                  onChange={(e) => update("dateFrom", e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t.orders.filters.dateTo}
+                </span>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  min={filters.dateFrom || undefined}
+                  onChange={(e) => update("dateTo", e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+            </div>
+            <label className="block flex-1 md:max-w-xs">
+              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                {t.orders.filters.customerLabel}
+              </span>
+              <select
+                value={filters.customerId}
+                onChange={(e) => update("customerId", e.target.value)}
+                className={inputCls}
+              >
+                <option value="">{t.orders.filters.customerAll}</option>
+                {customerOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {/* Preset chips */}
+          <div className="flex flex-wrap gap-2">
+            {presets.map((p) => {
+              const active = isPresetActive(p, filters);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  aria-pressed={active}
+                  className={`cursor-pointer h-9 px-3.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 ${
+                    active
+                      ? "bg-sky-700 text-white shadow-sm"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {t.orders.filters[p]}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active filter chips + reset */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {dateChipLabel && (
+                <span className="inline-flex items-center gap-1 h-9 pl-3 pr-1 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 text-xs font-medium">
+                  <CalendarIcon width={13} height={13} className="opacity-70" />
+                  {dateChipLabel}
+                  <button
+                    type="button"
+                    onClick={clearDateRange}
+                    aria-label={t.orders.filters.removeDateRange}
+                    className="cursor-pointer ml-1 w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-sky-100 dark:hover:bg-sky-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+                  >
+                    <XIcon width={13} height={13} />
+                  </button>
+                </span>
+              )}
+              {selectedCustomerLabel && (
+                <span className="inline-flex items-center gap-1 h-9 pl-3 pr-1 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-200 text-xs font-medium max-w-xs">
+                  <span className="truncate">{selectedCustomerLabel}</span>
+                  <button
+                    type="button"
+                    onClick={clearCustomer}
+                    aria-label={t.orders.filters.removeCustomer}
+                    className="cursor-pointer ml-1 w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-sky-100 dark:hover:bg-sky-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 flex-shrink-0"
+                  >
+                    <XIcon width={13} height={13} />
+                  </button>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="cursor-pointer ml-auto text-xs font-medium text-sky-700 dark:text-sky-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 rounded px-1"
+              >
+                {t.orders.filters.resetAll}
+              </button>
+            </div>
+          )}
         </div>
 
         {filtered.length === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
-            {t.orders.noMatch}
+            <p>{hasActiveFilters ? t.orders.filters.noMatchFiltered : t.orders.noMatch}</p>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="cursor-pointer mt-3 inline-flex items-center h-10 px-4 rounded-lg text-sm font-semibold text-white bg-sky-700 hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+              >
+                {t.orders.filters.resetAll}
+              </button>
+            )}
           </div>
         ) : (
           <>
