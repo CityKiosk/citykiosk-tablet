@@ -139,6 +139,18 @@ export default function OrdersPage() {
     (filters.dateFrom || filters.dateTo ? 1 : 0) + (filters.customerId ? 1 : 0);
   const hasActiveFilters = activeFilterCount > 0;
 
+  // Summed once per filtered set so the metrics row reflects the same scope
+  // shown in the table below.
+  const filteredTotal = useMemo(
+    () => filtered.reduce((sum, o) => sum + (o.gross_total ?? 0), 0),
+    [filtered],
+  );
+  const grandTotal = useMemo(
+    () => orders.reduce((sum, o) => sum + (o.gross_total ?? 0), 0),
+    [orders],
+  );
+  const showsSubset = hasActiveFilters || deferredSearch.trim().length > 0;
+
   function update<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
@@ -227,17 +239,13 @@ export default function OrdersPage() {
     );
   }
 
-  const headerCount = hasActiveFilters || deferredSearch.trim()
-    ? t.orders.filters.activeCount(filtered.length, orders.length)
-    : `${orders.length}`;
-
   const presets: Preset[] = ["today", "thisWeek", "thisMonth", "lastMonth"];
   const inputCls =
     "w-full h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60";
 
   return (
     <div>
-      <PageHeader title={`${t.orders.listTitle} (${headerCount})`} />
+      <PageHeader title={t.orders.listTitle} />
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-card overflow-hidden">
         {/* Filter bar */}
@@ -370,6 +378,35 @@ export default function OrdersPage() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Summary row — count + grand total. aria-live so the screen reader
+            announces the new totals after a filter change. */}
+        <div
+          className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 text-xs"
+          aria-live="polite"
+        >
+          <div className="text-slate-600 dark:text-slate-400">
+            <span className="font-semibold text-slate-900 dark:text-slate-50">
+              {t.orders.filters.summaryCount(filtered.length)}
+            </span>
+            {showsSubset && (
+              <span className="ml-1 text-slate-500 dark:text-slate-500">
+                ({t.orders.filters.summarySubset(filtered.length, orders.length)})
+              </span>
+            )}
+          </div>
+          <div className="text-slate-600 dark:text-slate-400">
+            {t.orders.filters.summaryTotal}{" "}
+            <span className="tabular font-semibold text-slate-900 dark:text-slate-50">
+              {formatPrice(filteredTotal)}
+            </span>
+            {showsSubset && filteredTotal !== grandTotal && (
+              <span className="ml-1 tabular text-slate-500 dark:text-slate-500">
+                / {formatPrice(grandTotal)}
+              </span>
+            )}
+          </div>
         </div>
 
         {filtered.length === 0 ? (

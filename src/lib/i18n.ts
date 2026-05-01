@@ -159,6 +159,9 @@ type LocaleDict = {
       activeCount: (n: number, total: number) => string;
       removeDateRange: string;
       removeCustomer: string;
+      summaryCount: (n: number) => string;
+      summaryTotal: string;
+      summarySubset: (shown: number, total: number) => string;
     };
   };
   product: { artNr: string; pack: (n: number) => string; required: string; dimensions: string };
@@ -463,6 +466,9 @@ export const dict: Record<Locale, LocaleDict> = {
         activeCount: (n: number, total: number) => `${n} von ${total} Bestellungen`,
         removeDateRange: "Zeitraum entfernen",
         removeCustomer: "Kundenfilter entfernen",
+        summaryCount: (n: number) => `${n} ${n === 1 ? "Bestellung" : "Bestellungen"}`,
+        summaryTotal: "Gesamt",
+        summarySubset: (shown: number, total: number) => `${shown} von ${total}`,
       },
     },
     product: {
