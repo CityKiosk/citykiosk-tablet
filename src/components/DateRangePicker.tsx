@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { de } from "date-fns/locale";
 import "react-day-picker/style.css";
@@ -20,11 +21,12 @@ type Props = {
   clearLabel: string;
   applyLabel: string;
   ariaLabel: string;
-  // Bound the dropdown caption so it can't pull years that pre-date the shop
-  // and don't run forever into the future.
   startYear?: number;
   endYear?: number;
 };
+
+const POPOVER_WIDTH = 320; // px — keeps the day grid 7 × 40 = 280 + padding
+const POPOVER_GAP = 8;
 
 export default function DateRangePicker({
   value,
@@ -38,15 +40,53 @@ export default function DateRangePicker({
   endYear = new Date().getFullYear() + 1,
 }: Props) {
   const [open, setOpen] = useState(false);
-  // Draft range — the picker mutates this freely while open; the parent only
-  // sees the change after the user hits "Anwenden". This way you can fix a
-  // wrong start click without immediately polluting the table.
+  const [coords, setCoords] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+  // Draft range — picker mutates freely while open; parent only sees the
+  // change after the user hits "Anwenden". Lets you fix a wrong start click
+  // without polluting the table mid-selection.
   const [draft, setDraft] = useState<DateRange | undefined>(() => ({
     from: fromIsoDay(value.from),
     to: fromIsoDay(value.to),
   }));
-  const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Portal target only exists after first client render; SSR returns null.
+  useEffect(() => setMounted(true), []);
+
+  // Position the popover under the trigger and clamp to viewport edges. Run
+  // before paint so the popover never "jumps" into place.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    function place() {
+      const rect = triggerRef.current!.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let left = rect.left;
+      // Right-align if the popover would overflow the right edge.
+      if (left + POPOVER_WIDTH > vw - 8) {
+        left = Math.max(8, vw - POPOVER_WIDTH - 8);
+      }
+      let top = rect.bottom + POPOVER_GAP;
+      // If not enough room below, flip above.
+      const estHeight = 420;
+      if (top + estHeight > vh - 8 && rect.top > vh / 2) {
+        top = Math.max(8, rect.top - estHeight - POPOVER_GAP);
+      }
+      setCoords({ top, left });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   // Sync draft when value changes from outside (preset chip click, clear all).
   useEffect(() => {
@@ -55,8 +95,7 @@ export default function DateRangePicker({
     }
   }, [open, value.from, value.to]);
 
-  // Click outside + ESC to close. Use pointerdown so a touch on the backdrop
-  // dismisses without waiting for the synthesized click.
+  // Click outside + ESC to close.
   useEffect(() => {
     if (!open) return;
     function handlePointer(e: PointerEvent) {
@@ -118,10 +157,107 @@ export default function DateRangePicker({
   }
 
   function handleClearTriggerX(e: React.MouseEvent) {
-    // Inline X on the trigger — bypass the popover, just clear directly.
     e.stopPropagation();
     onChange({ from: "", to: "" });
   }
+
+  // Native <select> with appearance-none stripped of its arrow — so wrap each
+  // dropdown in a relative span that paints a chevron on the right edge. RDP
+  // injects the <select> via the `dropdown` className.
+  const dropdownCls =
+    "appearance-none cursor-pointer text-sm font-semibold text-slate-900 dark:text-slate-50 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md pl-3 pr-7 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 border-0";
+
+  const popover = open && (
+    <>
+      <div
+        className="fixed inset-0 z-30 bg-slate-900/10 dark:bg-slate-950/30 md:bg-transparent"
+        aria-hidden="true"
+      />
+      <div
+        ref={popoverRef}
+        role="dialog"
+        aria-modal="false"
+        aria-label={ariaLabel}
+        style={{ position: "fixed", top: coords.top, left: coords.left, width: POPOVER_WIDTH }}
+        className="z-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 p-3"
+      >
+        <DayPicker
+          mode="range"
+          locale={de}
+          weekStartsOn={1}
+          numberOfMonths={1}
+          defaultMonth={draft?.from ?? new Date()}
+          selected={draft}
+          onSelect={setDraft}
+          captionLayout="dropdown"
+          startMonth={new Date(startYear, 0)}
+          endMonth={new Date(endYear, 11)}
+          showOutsideDays
+          classNames={{
+            root: "rdp-root",
+            months: "flex flex-col",
+            month: "space-y-2",
+            month_caption: "flex items-center justify-center gap-2 h-9",
+            caption_label: "hidden",
+            dropdowns: "flex items-center gap-2",
+            dropdown_root: "relative",
+            dropdown: dropdownCls,
+            chevron: "fill-slate-500 dark:fill-slate-400",
+            nav: "flex items-center justify-between",
+            button_previous:
+              "cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800",
+            button_next:
+              "cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800",
+            month_grid: "w-full border-collapse",
+            weekdays: "flex",
+            weekday:
+              "w-10 h-8 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase",
+            week: "flex",
+            day: "w-10 h-10 text-center align-middle p-0 relative",
+            day_button:
+              "cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60",
+            today: "font-semibold ring-1 ring-sky-500 rounded-md",
+            outside: "text-slate-300 dark:text-slate-600",
+            disabled: "text-slate-200 dark:text-slate-700 cursor-not-allowed",
+            selected:
+              "[&>button]:bg-sky-600 [&>button]:text-white [&>button]:hover:bg-sky-700",
+            range_start:
+              "bg-sky-100 dark:bg-sky-900/40 rounded-l-md [&>button]:bg-sky-600 [&>button]:text-white",
+            range_end:
+              "bg-sky-100 dark:bg-sky-900/40 rounded-r-md [&>button]:bg-sky-600 [&>button]:text-white",
+            range_middle:
+              "bg-sky-100 dark:bg-sky-900/40 [&>button]:bg-transparent [&>button]:text-sky-900 dark:[&>button]:text-sky-100 [&>button]:hover:bg-sky-200 dark:[&>button]:hover:bg-sky-900/60",
+          }}
+        />
+        <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={handleToday}
+            className="cursor-pointer h-9 px-3 rounded-md text-xs font-medium text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+          >
+            {todayLabel}
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleClear}
+              className="cursor-pointer h-9 px-3 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+            >
+              {clearLabel}
+            </button>
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={!draftReady}
+              className="cursor-pointer h-9 px-4 rounded-md text-xs font-semibold text-white bg-sky-700 hover:bg-sky-800 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+            >
+              {applyLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="relative">
@@ -153,97 +289,10 @@ export default function DateRangePicker({
         )}
       </button>
 
-      {open && (
-        <>
-          {/* Subtle backdrop on tablet — gives a clear "tap-anywhere-to-dismiss"
-              affordance without dimming the page like a modal. */}
-          <div
-            className="fixed inset-0 z-30 bg-slate-900/10 dark:bg-slate-950/30 md:bg-transparent"
-            aria-hidden="true"
-          />
-          <div
-            ref={popoverRef}
-            role="dialog"
-            aria-modal="false"
-            aria-label={ariaLabel}
-            className="absolute z-40 mt-2 left-0 sm:left-auto sm:right-0 md:left-0 md:right-auto w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl ring-1 ring-black/5 dark:ring-white/5 p-3"
-          >
-            <DayPicker
-              mode="range"
-              locale={de}
-              weekStartsOn={1}
-              numberOfMonths={1}
-              defaultMonth={draft?.from ?? new Date()}
-              selected={draft}
-              onSelect={setDraft}
-              captionLayout="dropdown"
-              startMonth={new Date(startYear, 0)}
-              endMonth={new Date(endYear, 11)}
-              showOutsideDays
-              classNames={{
-                root: "rdp-root",
-                months: "flex flex-col",
-                month: "space-y-2",
-                month_caption: "flex items-center justify-center gap-2 h-9",
-                caption_label: "hidden",
-                dropdowns: "flex items-center gap-1",
-                dropdown:
-                  "appearance-none cursor-pointer text-sm font-semibold text-slate-900 dark:text-slate-50 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60",
-                nav: "flex items-center justify-between",
-                button_previous:
-                  "cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800",
-                button_next:
-                  "cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800",
-                month_grid: "w-full border-collapse",
-                weekdays: "flex",
-                weekday:
-                  "w-10 h-8 text-center text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase",
-                week: "flex",
-                day: "w-10 h-10 text-center align-middle p-0 relative",
-                day_button:
-                  "cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60",
-                today: "font-semibold ring-1 ring-sky-500 rounded-md",
-                outside: "text-slate-300 dark:text-slate-600",
-                disabled: "text-slate-200 dark:text-slate-700 cursor-not-allowed",
-                selected:
-                  "[&>button]:bg-sky-600 [&>button]:text-white [&>button]:hover:bg-sky-700",
-                range_start:
-                  "bg-sky-100 dark:bg-sky-900/40 rounded-l-md [&>button]:bg-sky-600 [&>button]:text-white",
-                range_end:
-                  "bg-sky-100 dark:bg-sky-900/40 rounded-r-md [&>button]:bg-sky-600 [&>button]:text-white",
-                range_middle:
-                  "bg-sky-100 dark:bg-sky-900/40 [&>button]:bg-transparent [&>button]:text-sky-900 dark:[&>button]:text-sky-100 [&>button]:hover:bg-sky-200 dark:[&>button]:hover:bg-sky-900/60",
-              }}
-            />
-            <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={handleToday}
-                className="cursor-pointer h-9 px-3 rounded-md text-xs font-medium text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-              >
-                {todayLabel}
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="cursor-pointer h-9 px-3 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-                >
-                  {clearLabel}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApply}
-                  disabled={!draftReady}
-                  className="cursor-pointer h-9 px-4 rounded-md text-xs font-semibold text-white bg-sky-700 hover:bg-sky-800 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-                >
-                  {applyLabel}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Portal so the popover escapes the orders filter card's
+          overflow-hidden ancestor. Without this it gets clipped at the
+          card's bottom edge. */}
+      {mounted && popover && createPortal(popover, document.body)}
     </div>
   );
 }
