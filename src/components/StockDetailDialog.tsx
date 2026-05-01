@@ -256,7 +256,13 @@ export default function StockDetailDialog({
               onChange={handleInputChange}
               onBlur={handleInputBlur}
               onKeyDown={handleInputKeyDown}
-              onFocus={(e) => e.currentTarget.select()}
+              onFocus={(e) => {
+                // See StockRow — defer select to next frame so it survives
+                // the cursor-positioning that runs after a touch tap.
+                const target = e.currentTarget;
+                requestAnimationFrame(() => target.select());
+              }}
+              onClick={(e) => e.currentTarget.select()}
               aria-label={t.stock.valueLabel(name)}
               className={`w-24 h-12 px-2 text-center tabular text-lg font-semibold border border-slate-300 dark:border-slate-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 bg-white dark:bg-slate-950 ${
                 isLow

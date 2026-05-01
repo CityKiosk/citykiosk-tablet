@@ -131,7 +131,7 @@ export default function Sidebar({
                   aria-label={badgeLabel}
                   className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-semibold tabular"
                 >
-                  {badge > 99 ? "99+" : badge}
+                  {badge}
                 </span>
               )}
             </Link>

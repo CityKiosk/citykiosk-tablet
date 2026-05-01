@@ -265,7 +265,15 @@ function StockRowInner({ product, categoryName, onPersist, onOpenDetail }: Props
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           onKeyDown={handleInputKeyDown}
-          onFocus={(e) => e.currentTarget.select()}
+          onFocus={(e) => {
+            // Defer to next frame so the select runs AFTER the tap places
+            // the cursor — otherwise on touch devices the cursor land event
+            // overrides the selection and the next keystroke appends to the
+            // existing value (e.g. "0" + tap "5" -> "05" instead of "5").
+            const target = e.currentTarget;
+            requestAnimationFrame(() => target.select());
+          }}
+          onClick={(e) => e.currentTarget.select()}
           aria-label={t.stock.valueLabel(name)}
           className={`w-16 h-11 px-2 text-center tabular text-sm font-semibold border border-slate-300 dark:border-slate-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 bg-white dark:bg-slate-950 ${
             isLow
