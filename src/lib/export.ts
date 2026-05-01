@@ -168,15 +168,14 @@ async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
   // already moved the cursor to the last page, so this naturally lands there.
   let y = finalY + 8;
 
-  // Item count summary: total Stück (sum across line quantities) and the
-  // number of distinct Positionen. Mirrors the wording used in the cart's
-  // "X Artikel (Y Sorten)" line.
+  // Item count summary — same wording as the cart's "X Artikel (Y Sorten)"
+  // line so the PDF reads consistent with the on-screen Bestellung.
   const totalQty = order.items.reduce((sum, i) => sum + i.quantity, 0);
-  const totalPositions = order.items.length;
+  const totalSorten = order.items.length;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(
-    `Artikel insgesamt: ${totalQty} Stück (${totalPositions} Positionen)`,
+    `Artikel insgesamt: ${totalQty} Stück (${totalSorten} Sorten)`,
     14,
     y,
   );
