@@ -151,7 +151,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             </h1>
             <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">{customerDisplay(order)}</div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-              {order.order_number} · {formatDateTime(order.created_at, locale)}
+              {formatDateTime(order.created_at, locale)}
             </div>
           </div>
           <div className="flex flex-col items-start md:items-end gap-3">
