@@ -149,7 +149,10 @@ function StockRowInner({ product, categoryName, onPersist, onOpenDetail }: Props
 
   const name = product.name_de;
   const isNegative = value < 0;
-  const isLow = value >= 0 && value <= 5;
+  // Anything under 100 (including negative) renders red — owner wants the
+  // restock signal as soon as a SKU dips below the case-pack threshold, not
+  // only when it actually goes empty.
+  const isLow = value < 100;
   // Parsed draft (or null). Dirty = draft parses to something != last persisted.
   const draftParsed = (() => {
     const n = Number(draft);
@@ -265,10 +268,8 @@ function StockRowInner({ product, categoryName, onPersist, onOpenDetail }: Props
           onFocus={(e) => e.currentTarget.select()}
           aria-label={t.stock.valueLabel(name)}
           className={`w-16 h-11 px-2 text-center tabular text-sm font-semibold border border-slate-300 dark:border-slate-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 bg-white dark:bg-slate-950 ${
-            isNegative
+            isLow
               ? "text-rose-600 dark:text-rose-400"
-              : isLow
-              ? "text-amber-600 dark:text-amber-400"
               : "text-slate-900 dark:text-slate-50"
           }`}
         />

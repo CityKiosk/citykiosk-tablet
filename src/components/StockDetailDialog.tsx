@@ -72,7 +72,9 @@ export default function StockDetailDialog({
   const name = product.name_de;
   const description = product.description_de || "";
   const isNegative = value < 0;
-  const isLow = value >= 0 && value <= 5;
+  // Match StockRow — anything under 100 is the low-stock signal, not just
+  // the empty case.
+  const isLow = value < 100;
 
   const commit = useCallback(
     async (next: number, previous: number): Promise<boolean> => {
@@ -257,10 +259,8 @@ export default function StockDetailDialog({
               onFocus={(e) => e.currentTarget.select()}
               aria-label={t.stock.valueLabel(name)}
               className={`w-24 h-12 px-2 text-center tabular text-lg font-semibold border border-slate-300 dark:border-slate-700 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 bg-white dark:bg-slate-950 ${
-                isNegative
+                isLow
                   ? "text-rose-600 dark:text-rose-400"
-                  : isLow
-                  ? "text-amber-600 dark:text-amber-400"
                   : "text-slate-900 dark:text-slate-50"
               }`}
             />

@@ -591,7 +591,7 @@ export const dict: Record<Locale, LocaleDict> = {
       undo: "Rückgängig",
       undone: "Rückgängig gemacht",
       invalidValue: "Ungültiger Wert",
-      lowStockHint: (n: number) => `${n} Produkt(e) mit niedrigem Bestand (≤5)`,
+      lowStockHint: (n: number) => `${n} Produkt(e) mit niedrigem Bestand (<100)`,
       unit: "Stk.",
       productCount: (n: number) => `${n} Produkte`,
     },
