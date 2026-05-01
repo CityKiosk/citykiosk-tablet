@@ -54,7 +54,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" suppressHydrationWarning className={`${firaSans.variable} ${firaCode.variable}`}>
+    <html lang="de" suppressHydrationWarning className={`${firaSans.variable} ${firaCode.variable}`}>
       <head>
         <script src="/theme-init.js" />
       </head>

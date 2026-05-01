@@ -5,6 +5,20 @@ import { requirePinUnlocked } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+// Bust the route segment cache on every page that surfaces product/category
+// data so a save in /settings is visible on /catalog, /browse and /stock the
+// next time the user lands there. The "/" + "layout" call is the safety net
+// (covers every route that shares the root layout); the explicit paths below
+// it also discard any prefetched RSC payload sitting in the client router
+// cache for those routes.
+function revalidateProductSurfaces() {
+  revalidatePath("/catalog");
+  revalidatePath("/browse");
+  revalidatePath("/stock");
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+}
+
 // ── Update Product ──
 const UpdateProductSchema = z.object({
   id: z.string().uuid(),
@@ -80,9 +94,7 @@ export async function updateProduct(
     return { error: "Speichern fehlgeschlagen" };
   }
 
-  revalidatePath("/catalog");
-  revalidatePath("/stock");
-  revalidatePath("/", "layout");
+  revalidateProductSurfaces();
   return { success: true };
 }
 
@@ -125,7 +137,7 @@ export async function deleteProduct(productId: string): Promise<{ error?: string
 
   if (error) return { error: "Löschen fehlgeschlagen" };
 
-  revalidatePath("/catalog");
+  revalidateProductSurfaces();
   return {};
 }
 
@@ -192,8 +204,7 @@ export async function addCategoryQuick(nameDe: string): Promise<{ id?: string; e
     return { error: "Fehler beim Erstellen" };
   }
 
-  revalidatePath("/settings");
-  revalidatePath("/catalog");
+  revalidateProductSurfaces();
   return { id: data.id };
 }
 
@@ -228,7 +239,7 @@ export async function addCategory(
     return { error: "Fehler beim Erstellen" };
   }
 
-  revalidatePath("/catalog");
+  revalidateProductSurfaces();
   return { success: true };
 }
 
@@ -329,8 +340,7 @@ export async function deleteCategory(categoryId: string): Promise<{ error?: stri
     .eq("owner_id", user.id);
 
   if (error) return { error: "Löschen fehlgeschlagen" };
-  revalidatePath("/settings");
-  revalidatePath("/catalog");
+  revalidateProductSurfaces();
   return {};
 }
 
@@ -423,9 +433,6 @@ export async function addProduct(input: {
     .single();
 
   if (error) return { error: "Produkt konnte nicht erstellt werden" };
-  revalidatePath("/settings");
-  revalidatePath("/catalog");
-  revalidatePath("/stock");
-  revalidatePath("/", "layout");
+  revalidateProductSurfaces();
   return { id: data.id };
 }

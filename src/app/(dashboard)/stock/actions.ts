@@ -68,8 +68,13 @@ export async function updateStock(
 
   if (error || !data) return { error: "Speichern fehlgeschlagen" };
 
+  // Bust the route cache for every page that reads stock or product data so
+  // a save here is reflected on /catalog, /browse and /settings the next
+  // time the user navigates there.
   revalidatePath("/stock");
   revalidatePath("/catalog");
+  revalidatePath("/browse");
+  revalidatePath("/settings");
   revalidatePath("/", "layout");
   return { success: true, stock: data.stock };
 }

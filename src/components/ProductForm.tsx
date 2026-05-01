@@ -56,7 +56,10 @@ export default function ProductForm(props: AddProps | EditProps) {
   const initialDescDe = initial?.description_de || "";
   const initialImageUrl = initial?.image_url || "";
   const initialCategoryId = initial?.category_id || categories[0]?.id || "";
-  const initialPrice = initial?.price || 0;
+  // Postgres numeric(10,2) lands as a string ("2.99") via PostgREST despite
+  // the TS type saying number — coerce here so isDirty comparisons (price !==
+  // initialPrice) don't flag every untouched form as dirty.
+  const initialPrice = Number(initial?.price ?? 0) || 0;
   const initialDim = initial?.dimensions || "";
   const initialVe = initial?.packaging_unit || 0;
   const initialSku = initial?.sku || "";
@@ -65,7 +68,19 @@ export default function ProductForm(props: AddProps | EditProps) {
   const [descDe, setDescDe] = useState(initialDescDe);
   const [imageUrl, setImageUrl] = useState(initialImageUrl);
   const [categoryId, setCategoryId] = useState(initialCategoryId);
-  const [price, setPrice] = useState<number>(initialPrice);
+  // Price is held as the raw string the user typed so "2,99" stays "2,99" in
+  // the field. Numeric form is derived via parsePrice() below; comma OR dot
+  // both parse correctly. Using <input type="number"> caused Safari/iPad to
+  // silently drop the value when typed with a comma (German locale), which
+  // surfaced as "Preis muss > 0 sein" on save.
+  const [priceInput, setPriceInput] = useState<string>(
+    initialPrice ? String(initialPrice).replace(".", ",") : "",
+  );
+  function parsePrice(v: string): number {
+    const n = parseFloat(v.replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  }
+  const price = parsePrice(priceInput);
   const [dim, setDim] = useState(initialDim);
   const [dimCustom, setDimCustom] = useState(!!(initial?.dimensions && !dimPresets.includes(initial.dimensions)));
   const [ve, setVe] = useState<number>(initialVe);
@@ -392,12 +407,17 @@ export default function ProductForm(props: AddProps | EditProps) {
           <Field label={t.add.price} required htmlFor="pf-price">
             <input
               id="pf-price"
-              type="number"
-              min={0}
-              step="0.01"
+              type="text"
               inputMode="decimal"
-              value={price || ""}
-              onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              // Allow digits + a single comma OR dot. Keeps the field tolerant
+              // of "2,99" (German keyboard) AND "2.99" without forcing the
+              // user to learn which one this form expects.
+              pattern="[0-9]*[.,]?[0-9]*"
+              value={priceInput}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (/^[0-9]*[.,]?[0-9]*$/.test(v)) setPriceInput(v);
+              }}
               required
               aria-invalid={invalidPrice}
               aria-describedby={invalidPrice ? "pf-error" : undefined}
