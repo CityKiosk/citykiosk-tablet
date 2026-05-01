@@ -167,9 +167,21 @@ async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
   // Totals: rendered under the last row of the (final) table page. autoTable
   // already moved the cursor to the last page, so this naturally lands there.
   let y = finalY + 8;
+
+  // Item count summary: total Stück (sum across line quantities) and the
+  // number of distinct Positionen. Mirrors the wording used in the cart's
+  // "X Artikel (Y Sorten)" line.
+  const totalQty = order.items.reduce((sum, i) => sum + i.quantity, 0);
+  const totalPositions = order.items.length;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(
+    `Artikel insgesamt: ${totalQty} Stück (${totalPositions} Positionen)`,
+    14,
+    y,
+  );
+
   if (order.taxRate > 0) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
     doc.text("Zwischensumme (netto)", 140, y);
     doc.text(formatPrice(order.total), 196, y, { align: "right" });
     y += 5;
