@@ -1,8 +1,16 @@
 import { Order, Locale } from "./types";
 import { formatDateTime, formatPrice, dict } from "./i18n";
 
+// 10 items must fit on a single A4 page. With cellPadding 2mm top/bottom,
+// imgSize 18mm gives a row height of ~22mm. 10 × 22 = 220mm, plus 8mm head =
+// 228mm — well under the ~245mm body window we get after the page header.
 const ITEMS_PER_PAGE = 10;
 const LOGO_PATH = "/logo-192.png";
+const IMG_SIZE = 18;
+const ROW_MIN_HEIGHT = IMG_SIZE + 4;
+// Top margin reserved on every page for the logo + title block. autoTable
+// uses this on continuation pages, so the header zone never gets overdrawn.
+const TABLE_TOP_MARGIN = 42;
 
 function safeFileBase(order: Order, locale: Locale): string {
   const date = new Date(order.createdAt).toISOString().slice(0, 10);
@@ -36,65 +44,13 @@ async function loadImageAsDataUrl(src: string): Promise<string | null> {
 type JsPdf = import("jspdf").default;
 type AutoTableFn = (doc: unknown, opts: unknown) => void;
 
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-
-/** Logo + title + per-page metadata. Drawn at the top of every PDF page so a
- *  multi-page Bestellung still carries the SOCK OFF brand on each sheet. */
-function drawPageHeader(
-  doc: JsPdf,
-  order: Order,
-  locale: Locale,
-  logo: string | null,
-  pageIndex: number,
-  pageCount: number,
-): number {
-  const t = dict[locale];
-
-  if (logo) {
-    try {
-      // 24×24mm square in the top-left, leaving the title clear of the artwork.
-      doc.addImage(logo, "PNG", 14, 10, 24, 24);
-    } catch {
-      // Ignore failed logo embed; the rest of the header still renders.
-    }
-  }
-
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text(t.order.title, 42, 20);
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(formatDateTime(order.createdAt, locale), 196, 20, { align: "right" });
-  if (pageCount > 1) {
-    doc.setFontSize(9);
-    doc.text(`${pageIndex + 1} / ${pageCount}`, 196, 26, { align: "right" });
-  }
-
-  // Customer block only on the first page — subsequent pages start the table
-  // higher so we get a clean "continuation" look.
-  if (pageIndex === 0) {
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text(order.shopName, 42, 30);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(order.customerName, 42, 35);
-    return 42; // table startY for first page
-  }
-  return 38; // table startY for continuation pages
-}
-
 async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
   const [{ default: jsPDF }, autoTableMod] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
   ]);
   const autoTable = (autoTableMod as unknown as { default: AutoTableFn }).default;
+  const t = dict[locale];
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
@@ -118,7 +74,7 @@ async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
     locale === "de" ? "Gesamtpreis" : "Toplam",
   ];
 
-  const allRows = order.items.map((i) => [
+  const rows = order.items.map((i) => [
     i.productSku || "",
     "", // image placeholder — drawn via didDrawCell
     [i.productName, i.productDescription].filter(Boolean).join("\n"),
@@ -127,71 +83,89 @@ async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
     formatPrice(i.price * i.quantity, locale),
   ]);
 
-  const pages = chunk(allRows, ITEMS_PER_PAGE);
-  const pageCount = Math.max(pages.length, 1);
-  const imgSize = 34;
+  const expectedPageCount = Math.max(1, Math.ceil(order.items.length / ITEMS_PER_PAGE));
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  pages.forEach((pageRows, pageIndex) => {
-    if (pageIndex > 0) doc.addPage();
-    const startY = drawPageHeader(doc, order, locale, logo, pageIndex, pageCount);
-    const rowOffset = pageIndex * ITEMS_PER_PAGE;
-
-    autoTable(doc, {
-      startY,
-      head: [headers],
-      body: pageRows,
-      rowPageBreak: "avoid",
-      styles: {
-        font: "helvetica",
-        fontSize: 9,
-        cellPadding: 2,
-        minCellHeight: imgSize + 3,
-        valign: "middle",
-      },
-      headStyles: {
-        fillColor: [3, 105, 161],
-        textColor: 255,
-        fontStyle: "bold",
-        minCellHeight: 8,
-      },
-      columnStyles: {
-        0: { cellWidth: 22 },
-        1: { cellWidth: imgSize + 4 },
-        2: { cellWidth: "auto" },
-        3: { cellWidth: 16, halign: "right" },
-        4: { cellWidth: 24, halign: "right" },
-        5: { cellWidth: 28, halign: "right" },
-      },
-      didDrawCell: (data: {
-        section: string;
-        column: { index: number };
-        row: { index: number };
-        cell: { x: number; y: number; width: number; height: number };
-      }) => {
-        if (data.section !== "body" || data.column.index !== 1) return;
-        // row.index here is local to the current chunk — translate back to the
-        // global item index so the image lookup matches.
-        const item = order.items[rowOffset + data.row.index];
-        if (!item) return;
-        const img = imageMap.get(item.productImage);
-        if (!img) return;
-        const cx = data.cell.x + (data.cell.width - imgSize) / 2;
-        const cy = data.cell.y + (data.cell.height - imgSize) / 2;
-        if (cy + imgSize > pageHeight - 10) return;
+  autoTable(doc, {
+    startY: TABLE_TOP_MARGIN,
+    margin: { top: TABLE_TOP_MARGIN, right: 14, bottom: 14, left: 14 },
+    head: [headers],
+    body: rows,
+    rowPageBreak: "avoid",
+    pageBreak: "auto",
+    styles: {
+      font: "helvetica",
+      fontSize: 9,
+      cellPadding: 2,
+      minCellHeight: ROW_MIN_HEIGHT,
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [3, 105, 161],
+      textColor: 255,
+      fontStyle: "bold",
+      minCellHeight: 8,
+    },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: IMG_SIZE + 4 },
+      2: { cellWidth: "auto" },
+      3: { cellWidth: 16, halign: "right" },
+      4: { cellWidth: 24, halign: "right" },
+      5: { cellWidth: 28, halign: "right" },
+    },
+    didDrawPage: (data: { pageNumber: number }) => {
+      // Logo + title repeated on every page; customer block only on page 1.
+      if (logo) {
         try {
-          doc.addImage(img, "JPEG", cx, cy, imgSize, imgSize, undefined, "FAST");
+          doc.addImage(logo, "PNG", 14, 10, 24, 24);
         } catch {
-          // Ignore failed image adds.
+          // Ignore logo embed failures.
         }
-      },
-    });
+      }
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text(t.order.title, 42, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(formatDateTime(order.createdAt, locale), 196, 20, { align: "right" });
+
+      if (data.pageNumber === 1) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(order.shopName, 42, 30);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(order.customerName, 42, 35);
+      }
+    },
+    didDrawCell: (data: {
+      section: string;
+      column: { index: number };
+      row: { index: number };
+      cell: { x: number; y: number; width: number; height: number };
+    }) => {
+      if (data.section !== "body" || data.column.index !== 1) return;
+      const item = order.items[data.row.index];
+      if (!item) return;
+      const img = imageMap.get(item.productImage);
+      if (!img) return;
+      const cx = data.cell.x + (data.cell.width - IMG_SIZE) / 2;
+      const cy = data.cell.y + (data.cell.height - IMG_SIZE) / 2;
+      if (cy + IMG_SIZE > pageHeight - 10) return;
+      try {
+        doc.addImage(img, "JPEG", cx, cy, IMG_SIZE, IMG_SIZE, undefined, "FAST");
+      } catch {
+        // Ignore image embed failures.
+      }
+    },
   });
 
-  // Totals — drawn on the last page, under whatever the last autoTable left.
   type DocWithLastTable = JsPdf & { lastAutoTable?: { finalY: number } };
   const finalY = (doc as DocWithLastTable).lastAutoTable?.finalY ?? 60;
 
+  // Totals: rendered under the last row of the (final) table page. autoTable
+  // already moved the cursor to the last page, so this naturally lands there.
   let y = finalY + 8;
   if (order.taxRate > 0) {
     doc.setFont("helvetica", "normal");
@@ -209,6 +183,19 @@ async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
   doc.setFontSize(13);
   doc.text("Gesamt", 140, y);
   doc.text(formatPrice(order.grossTotal), 196, y, { align: "right" });
+
+  // Stamp "X / Y" on every page now that the total page count is known. Done
+  // as a second pass because autoTable's didDrawPage doesn't expose the final
+  // total — only the running pageNumber.
+  const totalPages = doc.getNumberOfPages();
+  if (totalPages > 1 || expectedPageCount > 1) {
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`${i} / ${totalPages}`, 196, 26, { align: "right" });
+    }
+  }
 
   return doc;
 }

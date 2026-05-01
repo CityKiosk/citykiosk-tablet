@@ -329,7 +329,7 @@ export const dict: Record<Locale, LocaleDict> = {
       qty: (n: string) => `Stück von ${n}`,
       cartCount: (n: number, kinds: number) => `${n} Artikel (${kinds} Sorten)`,
       cartTotal: "Gesamt",
-      cartSubtotal: "Zwischensumme",
+      cartSubtotal: "Zwischensumme (netto)",
       cartTaxLine: (rate: number) => `MwSt ${rate}%`,
       createOrder: "Bestellung erstellen",
       cartLive: (n: number, t: string) => `${n} Artikel im Warenkorb, gesamt ${t}`,
