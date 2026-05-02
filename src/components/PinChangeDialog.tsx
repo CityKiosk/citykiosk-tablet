@@ -107,21 +107,38 @@ export default function PinChangeDialog({ onClose, onSaved, scope = "default" }:
       return;
     }
     setPending(true);
-    const result = await setPinAction(currentPin, pin, scope);
-    setPending(false);
-    if (result.error) {
-      flash(pinErrorMessage(result.error, t));
-      if (result.error === "wrong_pin") {
-        setCurrentPin(null);
-        setNewPin(null);
-        setStep("current");
+    try {
+      const result = await setPinAction(currentPin, pin, scope);
+      if (result.error) {
+        flash(pinErrorMessage(result.error, t));
+        if (result.error === "wrong_pin") {
+          // Bad current PIN — restart from the very first step.
+          setCurrentPin(null);
+          setNewPin(null);
+          setStep("current");
+        } else {
+          // Internal / rate-limited / mismatch — current PIN is fine, just
+          // re-prompt the confirmation so the user isn't stuck on a fully
+          // filled disabled PinPad.
+          setStep("confirm");
+        }
         setResetKey((k) => k + 1);
+        return;
       }
-      return;
+      setCurrentPin(null);
+      setNewPin(null);
+      onSaved();
+    } catch (err) {
+      // Server action threw (network blip, RPC error, etc.). Without this
+      // catch the dialog stays stuck on "Wird gespeichert..." because the
+      // setPending(false) below would never run.
+      console.error("[PinChangeDialog] setPin threw:", err);
+      flash(pinErrorMessage("internal", t));
+      setStep("confirm");
+      setResetKey((k) => k + 1);
+    } finally {
+      setPending(false);
     }
-    setCurrentPin(null);
-    setNewPin(null);
-    onSaved();
   }
 
   function goBack() {
