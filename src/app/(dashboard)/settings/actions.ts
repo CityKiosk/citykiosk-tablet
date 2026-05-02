@@ -119,12 +119,32 @@ export type PinErrorCode =
 
 const PinSchema = z.string().regex(/^[0-9]{6}$/);
 
-export async function hasPin(): Promise<{ exists?: boolean; error?: PinErrorCode }> {
+// Scopes that can carry their own hash. "default" is the master/admin PIN
+// (always required). "stock" is the only optional override today; widening
+// this list means a code change here + a corresponding RPC update.
+const PinHashScopeSchema = z.enum(["default", "stock"]);
+export type PinHashScope = z.infer<typeof PinHashScopeSchema>;
+
+export async function hasPin(
+  scope: PinHashScope = "default",
+): Promise<{ exists?: boolean; error?: PinErrorCode }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthenticated" };
 
-  const { data, error } = await supabase.rpc("has_admin_pin");
+  if (!PinHashScopeSchema.safeParse(scope).success) return { error: "invalid_format" };
+
+  // The default scope keeps using the no-arg RPC for backwards compatibility
+  // with PinGate's existing call sites; non-default scopes go through the
+  // per-scope RPC.
+  if (scope === "default") {
+    const { data, error } = await supabase.rpc("has_admin_pin");
+    if (error) return { error: "internal" };
+    return { exists: !!data };
+  }
+  const { data, error } = await supabase.rpc("has_admin_pin_for_scope", {
+    p_scope: scope,
+  });
   if (error) return { error: "internal" };
   return { exists: !!data };
 }
@@ -136,7 +156,9 @@ export async function verifyPin(pin: string, scope: PinScope): Promise<{ success
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthenticated" };
 
-  if (!pinVerifyRateLimit.check(user.id)) {
+  // Per-scope rate bucket so a Lager-PIN brute force can't lock the owner
+  // out of /settings (and vice versa).
+  if (!pinVerifyRateLimit.check(`${user.id}:${scope}`)) {
     return { error: "rate_limited" };
   }
 
@@ -157,12 +179,14 @@ export async function verifyPin(pin: string, scope: PinScope): Promise<{ success
 export async function setPin(
   currentPin: string | null,
   newPin: string,
+  scope: PinHashScope = "default",
 ): Promise<{ success?: boolean; error?: PinErrorCode }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthenticated" };
 
-  if (!pinSetRateLimit.check(user.id)) {
+  if (!PinHashScopeSchema.safeParse(scope).success) return { error: "invalid_format" };
+  if (!pinSetRateLimit.check(`${user.id}:set:${scope}`)) {
     return { error: "rate_limited" };
   }
 
@@ -173,9 +197,46 @@ export async function setPin(
     return { error: "invalid_format" };
   }
 
+  // Defense in depth: refuse to set a non-default scope PIN before the admin
+  // PIN exists. The RPC enforces the same invariant — this guard short-
+  // circuits before we burn a rate-limit slot or hit the DB on an obviously
+  // invalid call (e.g. an attacker probing the RPC directly).
+  if (scope !== "default") {
+    const adminCheck = await hasPin("default");
+    if (!adminCheck.exists) return { error: "wrong_pin" };
+  }
+
   const { data, error } = await supabase.rpc("set_admin_pin", {
     p_current_pin: currentPin,
     p_new_pin: newPin,
+    p_scope: scope,
+  });
+  if (error) return { error: "internal" };
+  if (!data) return { error: "wrong_pin" };
+  return { success: true };
+}
+
+/** Removes a per-scope override (currently only "stock"). The admin/master
+ *  PIN can never be removed via this path — to "remove" the default PIN the
+ *  owner has to rotate it instead. Authorization: caller supplies the
+ *  current admin PIN. */
+export async function removePin(
+  adminPin: string,
+  scope: Exclude<PinHashScope, "default">,
+): Promise<{ success?: boolean; error?: PinErrorCode }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthenticated" };
+
+  if (!pinSetRateLimit.check(`${user.id}:remove:${scope}`)) {
+    return { error: "rate_limited" };
+  }
+  if (!PinSchema.safeParse(adminPin).success) return { error: "invalid_format" };
+  if (scope !== "stock") return { error: "invalid_format" };
+
+  const { data, error } = await supabase.rpc("remove_admin_pin", {
+    p_admin_pin: adminPin,
+    p_scope: scope,
   });
   if (error) return { error: "internal" };
   if (!data) return { error: "wrong_pin" };

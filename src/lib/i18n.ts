@@ -308,6 +308,21 @@ type LocaleDict = {
     loadError: string;
     retry: string;
     back: string;
+    // Stock-only PIN ("Lager-PIN"). Optional override that gates /stock
+    // independently of /settings; the admin PIN still works for /stock too.
+    stockSectionLabel: string;
+    stockOptional: string;
+    stockHint: string;
+    stockSetupButton: string;
+    stockChangeButton: string;
+    stockRemoveButton: string;
+    stockRemoveConfirm: string;
+    stockRemoveTitle: string;
+    stockRemoved: string;
+    changeStockSection: string;
+    enterCurrentOrAdmin: string;
+    enterAdminToRemove: string;
+    fallbackHintStock: string;
   };
 };
 
@@ -616,12 +631,25 @@ export const dict: Record<Locale, LocaleDict> = {
       backspace: "Löschen",
       digit: (n: number) => `Ziffer ${n}`,
       dotsProgress: (filled: number, total: number) => `${filled} von ${total} Ziffern eingegeben`,
-      changeSection: "PIN ändern",
-      changeDesc: "Aktualisieren Sie die PIN, mit der Einstellungen und Lager entsperrt werden.",
+      changeSection: "Admin-PIN ändern",
+      changeDesc: "Öffnet alle geschützten Bereiche (Einstellungen, Lager, Bestellungen).",
       changeButton: "PIN ändern",
       loadError: "PIN-Status konnte nicht geladen werden.",
       retry: "Erneut versuchen",
       back: "Zurück",
+      stockSectionLabel: "Lager-PIN",
+      stockOptional: "Optional",
+      stockHint: "Nur Zugriff auf Lager — Admin-PIN funktioniert dort weiterhin.",
+      stockSetupButton: "Einrichten",
+      stockChangeButton: "Ändern",
+      stockRemoveButton: "Entfernen",
+      stockRemoveConfirm: "Lager-PIN entfernen? Admin-PIN bleibt aktiv.",
+      stockRemoveTitle: "Lager-PIN entfernen",
+      stockRemoved: "Lager-PIN entfernt",
+      changeStockSection: "Lager-PIN ändern",
+      enterCurrentOrAdmin: "Aktuelle PIN oder Admin-PIN eingeben",
+      enterAdminToRemove: "Admin-PIN zur Bestätigung eingeben",
+      fallbackHintStock: "Admin-PIN funktioniert hier auch",
     },
   },
 };

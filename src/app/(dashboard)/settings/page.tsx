@@ -22,7 +22,13 @@ import {
   type SettingsCategory,
   type SettingsProduct,
 } from "@/app/(dashboard)/catalog/actions";
-import { lockPin } from "@/app/(dashboard)/settings/actions";
+import {
+  lockPin,
+  hasPin as hasPinAction,
+  removePin as removePinAction,
+} from "@/app/(dashboard)/settings/actions";
+import PinPad from "@/components/PinPad";
+import Modal from "@/components/Modal";
 
 type Tab = "categories" | "products" | "data" | "display";
 
@@ -36,6 +42,26 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("categories");
   const [unlocked, setUnlocked] = useState(false);
   const [showPinChange, setShowPinChange] = useState(false);
+  const [showStockPinChange, setShowStockPinChange] = useState(false);
+  const [showStockPinRemove, setShowStockPinRemove] = useState(false);
+  // Whether the optional Lager-PIN is currently set. Drives the
+  // Einrichten/Ändern/Entfernen button labels in the Daten tab.
+  const [stockPinExists, setStockPinExists] = useState<boolean | null>(null);
+  const [removePinPending, setRemovePinPending] = useState(false);
+  const [removePinError, setRemovePinError] = useState<string | null>(null);
+  const [removePinErrorKey, setRemovePinErrorKey] = useState(0);
+  const [removePinResetKey, setRemovePinResetKey] = useState(0);
+
+  const refreshStockPinStatus = useCallback(() => {
+    hasPinAction("stock").then((res) => {
+      if (res.exists !== undefined) setStockPinExists(!!res.exists);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    refreshStockPinStatus();
+  }, [unlocked, refreshStockPinStatus]);
   useEffect(() => {
     // Server state is the source of truth. sessionStorage is intentionally
     // NOT consulted on mount — it would let a stale client flag bypass the
@@ -405,6 +431,44 @@ export default function SettingsPage() {
                 </button>
               </div>
 
+              {/* Lager-PIN — optional override that gates /stock independently. */}
+              <div className="flex items-start justify-between gap-4 pt-5 border-t border-slate-200 dark:border-slate-800">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                      {t.pin.stockSectionLabel}
+                    </div>
+                    {stockPinExists === false && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                        {t.pin.stockOptional}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {t.pin.stockHint}
+                  </p>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {stockPinExists && (
+                    <button
+                      type="button"
+                      onClick={() => setShowStockPinRemove(true)}
+                      className="cursor-pointer h-9 px-3 rounded-lg text-xs font-medium text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                    >
+                      {t.pin.stockRemoveButton}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowStockPinChange(true)}
+                    disabled={stockPinExists === null}
+                    className="cursor-pointer h-9 px-4 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {stockPinExists ? t.pin.stockChangeButton : t.pin.stockSetupButton}
+                  </button>
+                </div>
+              </div>
+
               {/* Cache reset — fallback for the rare case where the service
                   worker is stuck serving a stale bundle and the automatic
                   update-on-focus didn't kick in. */}
@@ -548,6 +612,72 @@ export default function SettingsPage() {
             toast.show(t.pin.saved);
           }}
         />
+      )}
+      {showStockPinChange && (
+        <PinChangeDialog
+          scope="stock"
+          onClose={() => setShowStockPinChange(false)}
+          onSaved={() => {
+            setShowStockPinChange(false);
+            toast.show(t.pin.saved);
+            refreshStockPinStatus();
+          }}
+        />
+      )}
+      {showStockPinRemove && (
+        <Modal
+          title={t.pin.stockRemoveTitle}
+          onClose={() => {
+            setShowStockPinRemove(false);
+            setRemovePinError(null);
+          }}
+        >
+          <div className="px-6 py-6">
+            <p className="text-sm text-slate-700 dark:text-slate-300 text-center mb-4">
+              {t.pin.stockRemoveConfirm}
+            </p>
+            {removePinError && (
+              <div
+                role="alert"
+                className="mb-4 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-sm border border-red-200 dark:border-red-900 text-center"
+              >
+                {removePinError}
+              </div>
+            )}
+            <PinPad
+              label={t.pin.enterAdminToRemove}
+              onComplete={async (adminPin) => {
+                setRemovePinPending(true);
+                const result = await removePinAction(adminPin, "stock");
+                setRemovePinPending(false);
+                if (result.error) {
+                  const msg =
+                    result.error === "wrong_pin"
+                      ? t.pin.incorrect
+                      : result.error === "rate_limited"
+                        ? t.pin.tooManyAttempts
+                        : t.pin.saveError;
+                  setRemovePinError(msg);
+                  setRemovePinErrorKey((k) => k + 1);
+                  setRemovePinResetKey((k) => k + 1);
+                  return;
+                }
+                setShowStockPinRemove(false);
+                setRemovePinError(null);
+                toast.show(t.pin.stockRemoved);
+                refreshStockPinStatus();
+              }}
+              disabled={removePinPending}
+              errorKey={removePinErrorKey}
+              resetKey={removePinResetKey}
+            />
+            {removePinPending && (
+              <p className="mt-4 text-xs text-center text-slate-500 dark:text-slate-400">
+                {t.pin.saving}
+              </p>
+            )}
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import PinPad from "@/components/PinPad";
 import { useI18n } from "@/components/I18nProvider";
-import { setPin as setPinAction, type PinErrorCode } from "@/app/(dashboard)/settings/actions";
+import {
+  setPin as setPinAction,
+  hasPin as hasPinAction,
+  type PinErrorCode,
+  type PinHashScope,
+} from "@/app/(dashboard)/settings/actions";
 
 type Step = "current" | "new" | "confirm";
 
@@ -28,13 +33,17 @@ function pinErrorMessage(
   }
 }
 
-export default function PinChangeDialog({
-  onClose,
-  onSaved,
-}: {
+type Props = {
   onClose: () => void;
   onSaved: () => void;
-}) {
+  // Which hash to set/rotate. Default is the admin/master PIN; "stock"
+  // sets the optional Lager-PIN. Other PinScope values aren't valid here
+  // because per-screen unlock scopes (orders, customers) don't carry a
+  // separate hash — they use the default PIN.
+  scope?: PinHashScope;
+};
+
+export default function PinChangeDialog({ onClose, onSaved, scope = "default" }: Props) {
   const { t } = useI18n();
   const [step, setStep] = useState<Step>("current");
   const [currentPin, setCurrentPin] = useState<string | null>(null);
@@ -43,6 +52,32 @@ export default function PinChangeDialog({
   const [errorKey, setErrorKey] = useState(0);
   const [resetKey, setResetKey] = useState(0);
   const [pending, setPending] = useState(false);
+  // Whether THIS scope already has a PIN set. If not, the dialog skips the
+  // "current PIN" step (first-time setup) — but only when the rotation is
+  // for a non-default scope. The default PIN's first-time setup happens via
+  // PinGate's setupNew flow, not here.
+  const [scopeHasPin, setScopeHasPin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (scope === "default") {
+      setScopeHasPin(true);
+      return;
+    }
+    hasPinAction(scope).then((res) => {
+      if (cancelled) return;
+      // For non-default scopes we always require a current-PIN step. Even on
+      // first-time setup the server insists on the admin PIN as proof of
+      // authorization (the RPC's "no hashes at all" bypass branch is only
+      // for brand-new users who haven't set the admin PIN yet — unreachable
+      // from /settings, which is itself PIN-gated). The label below adapts:
+      // "Aktuelle PIN oder Admin-PIN" makes the override explicit.
+      setScopeHasPin(res.exists === undefined ? true : !!res.exists);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [scope]);
 
   function flash(msg: string) {
     setError(msg);
@@ -72,11 +107,10 @@ export default function PinChangeDialog({
       return;
     }
     setPending(true);
-    const result = await setPinAction(currentPin, pin);
+    const result = await setPinAction(currentPin, pin, scope);
     setPending(false);
     if (result.error) {
       flash(pinErrorMessage(result.error, t));
-      // Wrong current PIN → restart from "current".
       if (result.error === "wrong_pin") {
         setCurrentPin(null);
         setNewPin(null);
@@ -85,8 +119,6 @@ export default function PinChangeDialog({
       }
       return;
     }
-    // Zero captured PIN values before handing off — minimise DevTools
-    // visibility of the raw credentials.
     setCurrentPin(null);
     setNewPin(null);
     onSaved();
@@ -104,15 +136,22 @@ export default function PinChangeDialog({
     setResetKey((k) => k + 1);
   }
 
+  // Title + first-step label depend on which PIN we're rotating. Non-default
+  // scopes accept either the current scope PIN OR the admin PIN — surfaced
+  // in the prompt so the owner knows the admin override is available.
+  const title =
+    scope === "stock" ? t.pin.changeStockSection : t.pin.changeSection;
+  const enterCurrentLabel =
+    scope === "stock" ? t.pin.enterCurrentOrAdmin : t.pin.enterCurrent;
   const label =
     step === "current"
-      ? t.pin.enterCurrent
+      ? enterCurrentLabel
       : step === "new"
         ? t.pin.enterNew
         : t.pin.enterConfirm;
 
   return (
-    <Modal title={t.pin.changeSection} onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
       <div className="px-6 py-6">
         {error && (
           <div
@@ -126,7 +165,7 @@ export default function PinChangeDialog({
           key={step}
           label={label}
           onComplete={onComplete}
-          disabled={pending}
+          disabled={pending || scopeHasPin === null}
           errorKey={errorKey}
           resetKey={resetKey}
         />

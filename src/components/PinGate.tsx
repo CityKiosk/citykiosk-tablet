@@ -25,6 +25,9 @@ type Props = {
    *  scope so unlocking one (e.g. /settings) does not implicitly unlock
    *  another (e.g. /stock). */
   scope: PinScope;
+  /** Optional sub-heading shown under the title — used by /stock to tell
+   *  the user the admin PIN is also accepted (master override). */
+  fallbackHint?: string;
 };
 
 function pinErrorMessage(
@@ -47,7 +50,7 @@ function pinErrorMessage(
   }
 }
 
-export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope }: Props) {
+export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope, fallbackHint }: Props) {
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("loading");
   const [pending, setPending] = useState(false);
@@ -208,6 +211,14 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope }: 
             {heading}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
+          {/* Master-override hint, e.g. "Admin-PIN funktioniert hier auch"
+              on /stock. Only shown in unlock mode — during setupNew there
+              isn't a fallback to mention yet. */}
+          {fallbackHint && mode === "unlock" && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              {fallbackHint}
+            </p>
+          )}
         </div>
 
         {error && (

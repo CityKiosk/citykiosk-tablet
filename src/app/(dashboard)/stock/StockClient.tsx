@@ -127,6 +127,7 @@ export function StockClient({ products: initialProducts, categories }: Props) {
           unlockTitle={t.pin.unlockTitleStock}
           sessionKey={UNLOCK_KEY}
           scope="stock"
+          fallbackHint={t.pin.fallbackHintStock}
           onUnlocked={() => setUnlocked(true)}
         />
       </div>
