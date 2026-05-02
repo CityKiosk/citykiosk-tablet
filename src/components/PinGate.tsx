@@ -6,9 +6,11 @@ import { LockIcon } from "@/components/icons";
 import PinPad from "@/components/PinPad";
 import {
   getPinStatus,
+  hasPin as hasPinAction,
   setPin as setPinAction,
   verifyPin,
   type PinErrorCode,
+  type PinHashScope,
 } from "@/app/(dashboard)/settings/actions";
 import type { PinScope } from "@/lib/pinSession";
 
@@ -26,8 +28,15 @@ type Props = {
    *  another (e.g. /stock). */
   scope: PinScope;
   /** Optional sub-heading shown under the title — used by /stock to tell
-   *  the user the admin PIN is also accepted (master override). */
+   *  the user the admin PIN is also accepted as fallback. Only rendered
+   *  when `fallbackHintScope`'s scope-specific hash is NOT set; once the
+   *  user sets a Lager-PIN the admin PIN no longer unlocks /stock and
+   *  the hint becomes a lie. */
   fallbackHint?: string;
+  /** Which scope's hash existence determines whether the fallback hint
+   *  is shown. Independent of the unlock scope so hint logic can be
+   *  decoupled from auth flow. */
+  fallbackHintScope?: PinHashScope;
 };
 
 function pinErrorMessage(
@@ -50,7 +59,14 @@ function pinErrorMessage(
   }
 }
 
-export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope, fallbackHint }: Props) {
+export default function PinGate({
+  unlockTitle,
+  onUnlocked,
+  sessionKey,
+  scope,
+  fallbackHint,
+  fallbackHintScope,
+}: Props) {
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("loading");
   const [pending, setPending] = useState(false);
@@ -59,6 +75,10 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope, fa
   const [resetKey, setResetKey] = useState(0);
   const [newPin, setNewPin] = useState<string | null>(null);
   const [probe, setProbe] = useState(0);
+  // Whether the fallback hint should appear. Tri-state: null = still
+  // loading (hide), true = scope hash NOT set so admin PIN still works,
+  // false = scope hash set so admin PIN no longer works for this scope.
+  const [showFallbackHint, setShowFallbackHint] = useState<boolean | null>(null);
 
   // Always require fresh PIN entry on each admin page visit. Threat model:
   // owner hands the tablet to a customer; customer must NOT be able to walk
@@ -84,6 +104,25 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope, fa
       cancelled = true;
     };
   }, [probe, scope]);
+
+  useEffect(() => {
+    if (!fallbackHint || !fallbackHintScope) {
+      setShowFallbackHint(false);
+      return;
+    }
+    let cancelled = false;
+    hasPinAction(fallbackHintScope).then((res) => {
+      if (cancelled) return;
+      // Show hint only when the scope-specific hash is NOT set — that's the
+      // window where admin PIN actually still unlocks this scope.
+      setShowFallbackHint(res.exists === false);
+    }).catch(() => {
+      if (!cancelled) setShowFallbackHint(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackHint, fallbackHintScope, probe]);
 
   const flashError = useCallback((message: string) => {
     setError(message);
@@ -211,10 +250,10 @@ export default function PinGate({ unlockTitle, onUnlocked, sessionKey, scope, fa
             {heading}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
-          {/* Master-override hint, e.g. "Admin-PIN funktioniert hier auch"
-              on /stock. Only shown in unlock mode — during setupNew there
-              isn't a fallback to mention yet. */}
-          {fallbackHint && mode === "unlock" && (
+          {/* Fallback hint shown only while the scope-specific hash isn't
+              set yet — once the user sets a Lager-PIN the admin PIN stops
+              unlocking /stock and the hint would mislead. */}
+          {fallbackHint && mode === "unlock" && showFallbackHint && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
               {fallbackHint}
             </p>

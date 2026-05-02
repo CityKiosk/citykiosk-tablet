@@ -639,7 +639,7 @@ export const dict: Record<Locale, LocaleDict> = {
       back: "Zurück",
       stockSectionLabel: "Lager-PIN",
       stockOptional: "Optional",
-      stockHint: "Nur Zugriff auf Lager — Admin-PIN funktioniert dort weiterhin.",
+      stockHint: "Sobald gesetzt, öffnet nur die Lager-PIN das Lager. Zum Zurücksetzen oben auf Entfernen tippen.",
       stockSetupButton: "Einrichten",
       stockChangeButton: "Ändern",
       stockRemoveButton: "Entfernen",

@@ -127,6 +127,11 @@ export function StockClient({ products: initialProducts, categories }: Props) {
           unlockTitle={t.pin.unlockTitleStock}
           sessionKey={UNLOCK_KEY}
           scope="stock"
+          // Show "Admin-PIN funktioniert hier auch" only when the Lager-PIN
+          // hasn't been set yet. Once it's set, the admin PIN no longer
+          // unlocks /stock (strict scope) — surfacing the hint at that
+          // point would be a misleading nudge.
+          fallbackHintScope="stock"
           fallbackHint={t.pin.fallbackHintStock}
           onUnlocked={() => setUnlocked(true)}
         />
