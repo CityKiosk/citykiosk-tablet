@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/I18nProvider";
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
@@ -32,7 +31,6 @@ const UNLOCK_KEY = "souvenir_admin_unlocked_stock";
 export function StockClient({ products: initialProducts, categories }: Props) {
   const { t, locale } = useI18n();
   const toast = useToast();
-  const router = useRouter();
 
   const [unlocked, setUnlocked] = useState(false);
 
@@ -97,13 +95,13 @@ export function StockClient({ products: initialProducts, categories }: Props) {
         toast.show(t.stock.saveFailed, "error");
         return null;
       }
-      // Reflect persisted value locally.
+      // Reflect persisted value locally. The server action already calls
+      // revalidatePath, and staleTimes.dynamic=0 in next.config keeps the
+      // Router Cache fresh — no explicit router.refresh() needed (it would
+      // race the action's own revalidation and flicker stale values in).
       setProducts((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, stock: result.stock! } : p)),
       );
-      // Bust the client Router Cache for /stock so re-clicking the sidebar
-      // Lager link shows the fresh value instead of the pre-save snapshot.
-      router.refresh();
       // Undo toast — reverts to previous stock on click.
       toast.showWithAction(t.stock.saved, {
         label: t.stock.undo,
@@ -116,13 +114,12 @@ export function StockClient({ products: initialProducts, categories }: Props) {
           setProducts((prev) =>
             prev.map((p) => (p.id === productId ? { ...p, stock: undo.stock! } : p)),
           );
-          router.refresh();
           toast.show(t.stock.undone);
         },
       });
       return result.stock;
     },
-    [router, t.stock.saved, t.stock.saveFailed, t.stock.undo, t.stock.undone, toast],
+    [t.stock.saved, t.stock.saveFailed, t.stock.undo, t.stock.undone, toast],
   );
 
   if (!unlocked) {
