@@ -329,24 +329,11 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
         <h1 className="text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide text-center">
           Souvenirs Berlin — Produktkatalog
         </h1>
-        {navTargets.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Inhalt öffnen"
-            aria-haspopup="dialog"
-            aria-expanded={menuOpen}
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-9 px-3 inline-flex items-center gap-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
-          >
-            <MenuIcon width={16} height={16} />
-            <span>Inhalt</span>
-          </button>
-        )}
         <SessionThemeToggle />
       </div>
 
       <div className="flex-1 min-h-0 flex items-center justify-center">
-        <div className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full">
+        <div className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full relative">
           <Flipbook
             width={750}
             height={842}
@@ -376,6 +363,25 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
               </FlipPage>
             ))}
           </Flipbook>
+          {navTargets.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Inhalt öffnen"
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              className="cursor-pointer absolute left-0 top-12 z-30 flex flex-col items-center justify-center gap-2 py-3 bg-amber-500 dark:bg-amber-400 text-white dark:text-slate-900 shadow-md hover:shadow-lg rounded-r-lg transition-transform duration-150 hover:translate-x-1 focus-visible:translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+              style={{ width: 38, minHeight: 140 }}
+            >
+              <MenuIcon width={18} height={18} />
+              <span
+                className="text-[11px] font-bold uppercase tracking-[0.18em] whitespace-nowrap"
+                style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+              >
+                Inhalt
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

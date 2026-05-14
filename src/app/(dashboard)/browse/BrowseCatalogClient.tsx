@@ -334,21 +334,8 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
       role="region"
       aria-label={t.nav.browse}
     >
-      {/* Minimal top bar — contents + share + exit */}
-      <div className="flex-shrink-0 flex items-center justify-between gap-2 pb-2">
-        {navTargets.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={menuOpen}
-            className="cursor-pointer h-10 px-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-          >
-            <MenuIcon width={16} height={16} />
-            <span>{t.browse.contents}</span>
-          </button>
-        ) : <span />}
-        <div className="flex items-center gap-2">
+      {/* Minimal top bar — share + exit */}
+      <div className="flex-shrink-0 flex items-center justify-end gap-2 pb-2">
         <button
           type="button"
           disabled={sharing}
@@ -376,7 +363,6 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
         >
           <XIcon width={18} height={18} />
         </Link>
-        </div>
       </div>
       {products.length === 0 ? (
         <EmptyState
@@ -388,7 +374,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
         <>
           <div className="flex-1 min-h-0 flex items-center justify-center">
             <div
-              className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full"
+              className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full relative"
             >
               <Flipbook
                 width={750}
@@ -422,6 +408,25 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
                   </FlipPage>
                 ))}
               </Flipbook>
+              {navTargets.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(true)}
+                  aria-label={t.browse.contents}
+                  aria-haspopup="dialog"
+                  aria-expanded={menuOpen}
+                  className="cursor-pointer absolute left-0 top-12 z-30 flex flex-col items-center justify-center gap-2 py-3 bg-amber-500 dark:bg-amber-400 text-white dark:text-slate-900 shadow-md hover:shadow-lg rounded-r-lg transition-transform duration-150 hover:translate-x-1 focus-visible:translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                  style={{ width: 38, minHeight: 140 }}
+                >
+                  <MenuIcon width={18} height={18} />
+                  <span
+                    className="text-[11px] font-bold uppercase tracking-[0.18em] whitespace-nowrap"
+                    style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+                  >
+                    {t.browse.contents}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
