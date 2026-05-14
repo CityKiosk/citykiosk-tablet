@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState, memo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { FlipPage } from "@/components/Flipbook";
+import LegalPage from "@/components/LegalPage";
 import { formatPrice } from "@/lib/i18n";
 import { ChevronRightIcon, SunIcon, MoonIcon, MenuIcon, XIcon } from "@/components/icons";
 
@@ -225,7 +226,8 @@ function Grid({ items, displayFields }: { items: Product[]; displayFields: Displ
 // ── Main ──
 type PageItem =
   | { kind: "cover"; category: Category; sample: Product[] }
-  | { kind: "grid"; items: Product[]; category?: Category };
+  | { kind: "grid"; items: Product[]; category?: Category }
+  | { kind: "legal" };
 
 export default function PublicFlipbook({ products, categories, displayFields }: { products: Product[]; categories: Category[]; displayFields: DisplayFields }) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -271,25 +273,34 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
         result.push({ kind: "grid", items: ch });
       }
     }
+    if (result.length > 0) {
+      result.push({ kind: "legal" });
+    }
     return result;
   }, [products, catById]);
 
   const totalPages = pages.length;
 
-  // Navigation targets: first page index for each category (cover) + uncategorized bucket
+  // Navigation targets: first page index for each category (cover) + uncategorized bucket + legal
   const navTargets = useMemo(() => {
     const targets: { key: string; label: string; pageIndex: number }[] = [];
     let uncategorizedIdx = -1;
+    let legalIdx = -1;
     for (let i = 0; i < pages.length; i++) {
       const p = pages[i];
       if (p.kind === "cover") {
         targets.push({ key: p.category.id, label: p.category.name_de, pageIndex: i });
       } else if (p.kind === "grid" && !p.category && uncategorizedIdx === -1) {
         uncategorizedIdx = i;
+      } else if (p.kind === "legal") {
+        legalIdx = i;
       }
     }
     if (uncategorizedIdx !== -1) {
       targets.push({ key: "__uncategorized__", label: "Sonstige", pageIndex: uncategorizedIdx });
+    }
+    if (legalIdx !== -1) {
+      targets.push({ key: "__legal__", label: "AGB", pageIndex: legalIdx });
     }
     return targets;
   }, [pages]);
@@ -334,14 +345,16 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
               <FlipPage
                 key={idx}
                 className={
-                  page.kind === "cover"
-                    ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden"
-                    : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3"
+                  page.kind === "grid"
+                    ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3"
+                    : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden"
                 }
                 isActive={idx === currentPage}
               >
                 {page.kind === "cover" ? (
                   <CoverPage category={page.category} sample={page.sample} />
+                ) : page.kind === "legal" ? (
+                  <LegalPage />
                 ) : (
                   <div className="relative h-full">
                     <Grid items={page.items} displayFields={displayFields} />
