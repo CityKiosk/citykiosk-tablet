@@ -175,6 +175,8 @@ type LocaleDict = {
     addingSoon: string;
     contents: string;
     uncategorized: string;
+    categoryEyebrow: string;
+    productCount: (n: number) => string;
   };
   add2: {
     dimensions: string;
@@ -506,6 +508,8 @@ export const dict: Record<Locale, LocaleDict> = {
       addingSoon: "Produkte werden bald hinzugefügt",
       contents: "Inhalt",
       uncategorized: "Sonstige",
+      categoryEyebrow: "Kategorie",
+      productCount: (n: number) => `${n} ${n === 1 ? "Produkt" : "Produkte"}`,
     },
     add2: {
       dimensions: "Maße",

@@ -146,49 +146,39 @@ const Card = memo(CardImpl);
 // ── Category Cover ──
 function CoverPage({ category, sample }: { category: Category; sample: Product[] }) {
   const name = category.name_de;
-  const images = sample.slice(0, 5).map((p) => p.image_url).filter((u): u is string => !!u);
+  const hero = sample.find((p) => !!p.image_url)?.image_url ?? null;
+  const productCount = sample.length;
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 overflow-hidden">
-      <div className="flex-1 min-h-0 grid grid-cols-6 grid-rows-6 gap-1.5 p-3">
-        {images[0] && (
-          <div className="col-span-4 row-span-4 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 shadow-lg">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={images[0]} alt="" className="w-full h-full object-cover" loading="eager" />
-          </div>
-        )}
-        {images[1] && (
-          <div className="col-span-2 row-span-2 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 shadow-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={images[1]} alt="" className="w-full h-full object-cover" loading="eager" />
-          </div>
-        )}
-        {images[2] && (
-          <div className="col-span-2 row-span-2 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 shadow-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={images[2]} alt="" className="w-full h-full object-cover" loading="eager" />
-          </div>
-        )}
-        {images[3] && (
-          <div className="col-span-3 row-span-2 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 shadow-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={images[3]} alt="" className="w-full h-full object-cover" loading="eager" />
-          </div>
-        )}
-        {images[4] && (
-          <div className="col-span-3 row-span-2 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 shadow-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={images[4]} alt="" className="w-full h-full object-cover" loading="eager" />
-          </div>
-        )}
-      </div>
-      <div className="flex-shrink-0 px-6 py-5 text-center border-t-2 border-sky-700/20 dark:border-sky-400/20 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-sky-700 dark:text-sky-400 mb-1">
+    <div className="relative h-full overflow-hidden bg-slate-900">
+      {hero && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={hero}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
+        />
+      )}
+      {/* Dark gradient overlay for text readability */}
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/20"
+        aria-hidden="true"
+      />
+      {/* Magazine-style title block */}
+      <div className="absolute inset-x-0 bottom-0 px-8 pb-10 sm:pb-12 text-white">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.35em] text-amber-300 mb-3">
           Kategorie
         </div>
-        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+        <h2 className="text-5xl sm:text-6xl font-bold uppercase tracking-tight leading-[0.9] mb-4 drop-shadow-lg">
           {name}
         </h2>
+        <div className="flex items-center gap-3 text-xs sm:text-sm text-white/80">
+          <span className="h-px w-10 bg-amber-300" aria-hidden="true" />
+          <span className="font-medium tabular">
+            {productCount} {productCount === 1 ? "Produkt" : "Produkte"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -332,8 +322,8 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
         <SessionThemeToggle />
       </div>
 
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <div className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full relative">
+      <div className="flex-1 min-h-0 flex items-center justify-center relative">
+        <div className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full">
           <Flipbook
             width={750}
             height={842}
@@ -363,26 +353,26 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
               </FlipPage>
             ))}
           </Flipbook>
-          {navTargets.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="Inhalt öffnen"
-              aria-haspopup="dialog"
-              aria-expanded={menuOpen}
-              className="cursor-pointer absolute left-0 top-12 z-30 flex flex-col items-center justify-center gap-2 py-3 bg-amber-500 dark:bg-amber-400 text-white dark:text-slate-900 shadow-md hover:shadow-lg rounded-r-lg transition-transform duration-150 hover:translate-x-1 focus-visible:translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
-              style={{ width: 38, minHeight: 140 }}
-            >
-              <MenuIcon width={18} height={18} />
-              <span
-                className="text-[11px] font-bold uppercase tracking-[0.18em] whitespace-nowrap"
-                style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
-              >
-                Inhalt
-              </span>
-            </button>
-          )}
         </div>
+        {navTargets.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Inhalt öffnen"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            className="cursor-pointer absolute left-0 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center gap-2 py-3 bg-amber-500 dark:bg-amber-400 text-white dark:text-slate-900 shadow-md hover:shadow-lg rounded-r-lg transition-transform duration-150 hover:translate-x-1 focus-visible:translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+            style={{ width: 38, minHeight: 140 }}
+          >
+            <MenuIcon width={18} height={18} />
+            <span
+              className="text-[11px] font-bold uppercase tracking-[0.18em] whitespace-nowrap"
+              style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+            >
+              Inhalt
+            </span>
+          </button>
+        )}
       </div>
 
       <span
