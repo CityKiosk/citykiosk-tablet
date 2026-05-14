@@ -34,7 +34,7 @@ export default function Flipbook({ width, height, children, onFlip, flipRef }: F
       minHeight={425}
       maxHeight={1700}
       drawShadow={true}
-      flippingTime={800}
+      flippingTime={400}
       showCover={false}
       mobileScrollSupport={true}
       usePortrait={true}
