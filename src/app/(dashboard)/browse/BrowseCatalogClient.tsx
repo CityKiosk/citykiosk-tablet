@@ -425,34 +425,14 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
             </div>
           </div>
 
-          <div className="flex-shrink-0 flex items-center justify-between pt-3">
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={currentPage === 0}
-              className="cursor-pointer h-11 px-5 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-            >
-              <ChevronRightIcon width={16} height={16} className="rotate-180 inline-block" />{" "}
-              {t.browse.back}
-            </button>
-            <span
-              className="text-xs font-medium text-slate-500 dark:text-slate-400 tabular"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {t.browse.page(currentPage + 1, totalPages)}
-            </span>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={currentPage >= totalPages - 1}
-              className="cursor-pointer h-11 px-5 rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
-            >
-              {t.browse.next}{" "}
-              <ChevronRightIcon width={16} height={16} className="inline-block" />
-            </button>
-          </div>
+          <span
+            className="pointer-events-none absolute bottom-3 right-3 z-10 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 backdrop-blur tabular"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {currentPage + 1} / {totalPages}
+          </span>
         </>
       )}
 
