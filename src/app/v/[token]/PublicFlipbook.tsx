@@ -82,7 +82,7 @@ function SessionThemeToggle() {
   );
 }
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 4;
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
@@ -226,7 +226,7 @@ function Bookmark({ category, side }: { category: Category; side: "left" | "righ
 // ── Grid ──
 function Grid({ items, displayFields }: { items: Product[]; displayFields: DisplayFields }) {
   return (
-    <div className="h-full grid grid-cols-2 grid-rows-3 gap-3 overflow-hidden">
+    <div className="h-full grid grid-cols-2 grid-rows-2 gap-3 overflow-hidden">
       {items.map((p) => <Card key={p.id} product={p} displayFields={displayFields} />)}
     </div>
   );

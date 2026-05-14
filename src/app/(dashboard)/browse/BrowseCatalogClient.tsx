@@ -49,7 +49,7 @@ type ServerProduct = {
   sort_order: number;
 };
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 4;
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
@@ -202,7 +202,7 @@ function CategoryCover({ category, sample }: { category: ServerCategory; sample:
 
 function PageGrid({ items, catById }: { items: ServerProduct[]; catById: Map<string, ServerCategory> }) {
   return (
-    <div className="h-full grid grid-cols-2 grid-rows-3 gap-3">
+    <div className="h-full grid grid-cols-2 grid-rows-2 gap-3">
       {items.map((p) => {
         const cat = p.category_id ? catById.get(p.category_id) : undefined;
         return (
