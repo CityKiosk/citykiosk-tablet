@@ -7,7 +7,7 @@ import PinPad from "./PinPad";
 import { useI18n } from "./I18nProvider";
 import { OrderItem } from "@/lib/types";
 import { formatPrice } from "@/lib/i18n";
-import { DEFAULT_TAX_RATE, calculateTax } from "@/lib/tax";
+import { DEFAULT_TAX_RATE, applyDiscount } from "@/lib/tax";
 import { useToast } from "./Toast";
 import {
   createOrder,
@@ -32,11 +32,13 @@ function pinErrorMessage(code: PinErrorCode, t: ReturnType<typeof useI18n>["t"])
 export default function OrderDialog({
   items,
   total,
+  discountPct = 0,
   onClose,
   onSaved,
 }: {
   items: OrderItem[];
   total: number;
+  discountPct?: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -151,6 +153,7 @@ export default function OrderDialog({
       customer_first_name: customerFirstName,
       customer_last_name: customerLastName,
       customer_shop_name: customerShopName,
+      discount_pct: discountPct,
       items: orderItems,
     };
 
@@ -340,13 +343,19 @@ export default function OrderDialog({
             ))}
           </ul>
           {(() => {
-            const { tax, gross } = calculateTax(total, DEFAULT_TAX_RATE);
+            const { discountAmount, tax, gross } = applyDiscount(total, discountPct, DEFAULT_TAX_RATE);
             return (
               <dl className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-1">
                 <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
                   <dt>{t.catalog.cartSubtotal}</dt>
                   <dd className="tabular">{formatPrice(total)}</dd>
                 </div>
+                {discountPct > 0 && (
+                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                    <dt>{t.discount.rowLabel(discountPct)}</dt>
+                    <dd className="tabular">−{formatPrice(discountAmount)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
                   <dt>{t.catalog.cartTaxLine(DEFAULT_TAX_RATE)}</dt>
                   <dd className="tabular">{formatPrice(tax)}</dd>

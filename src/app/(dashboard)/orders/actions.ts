@@ -5,7 +5,7 @@ import { requirePinUnlocked } from "@/lib/pinSession";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createOrderRateLimit } from "@/lib/rateLimit";
-import { DEFAULT_TAX_RATE, calculateTax } from "@/lib/tax";
+import { DEFAULT_TAX_RATE, applyDiscount, MAX_DISCOUNT_PCT } from "@/lib/tax";
 
 // ── Create Order ──
 const safeImageUrl = z.string().refine(
@@ -35,6 +35,10 @@ const CreateOrderSchema = z.object({
   customer_last_name: z.string().max(100).optional(),
   customer_shop_name: z.string().min(1, "Firmenname erforderlich").max(200),
   notes: z.string().max(2000).optional(),
+  // Order-level discount percentage. Mirrors the DB CHECK in
+  // 20260515_order_discount.sql; non-zero values require PIN unlock below
+  // so a hostile customer cannot fire a 20 % off order via DevTools.
+  discount_pct: z.number().int().min(0).max(MAX_DISCOUNT_PCT).optional(),
   items: z.array(OrderItemSchema).min(1, "Mindestens ein Produkt").max(500),
 });
 
@@ -51,6 +55,7 @@ export async function createOrder(input: {
   customer_last_name?: string;
   customer_shop_name: string;
   notes?: string;
+  discount_pct?: number;
   items: {
     product_id: string;
     product_name_de: string;
@@ -134,9 +139,18 @@ export async function createOrder(input: {
   const { data: orderNum } = await supabase.rpc("next_order_number");
   if (!orderNum) return { error: "Bestellnummer konnte nicht generiert werden" };
 
-  // Calculate net total from verified prices, then stamp VAT.
-  const net = Math.round(data.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 100) / 100;
-  const { tax, gross } = calculateTax(net, DEFAULT_TAX_RATE);
+  // Order-level discount — gate the non-zero path behind the admin PIN
+  // (`settings` scope). A hostile customer with DevTools cannot post a
+  // discounted order without first unlocking the PIN.
+  const discountPct = data.discount_pct ?? 0;
+  if (discountPct > 0) {
+    const gate = await requirePinUnlocked("settings");
+    if (gate) return { error: "PIN erforderlich" };
+  }
+
+  // Calculate net subtotal from verified prices, then apply discount + VAT.
+  const subtotal = Math.round(data.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) * 100) / 100;
+  const { discountAmount, net, tax, gross } = applyDiscount(subtotal, discountPct, DEFAULT_TAX_RATE);
 
   // Create order
   const { data: order, error: orderErr } = await supabase
@@ -152,6 +166,8 @@ export async function createOrder(input: {
       tax_rate: DEFAULT_TAX_RATE,
       tax_amount: tax,
       gross_total: gross,
+      discount_pct: discountPct,
+      discount_amount: discountAmount,
       notes: data.notes || null,
       status: "confirmed",
       idempotency_key: data.idempotency_key ?? null,
@@ -285,6 +301,8 @@ export type OrderRow = {
   tax_rate: number;
   tax_amount: number;
   gross_total: number;
+  discount_pct: number;
+  discount_amount: number;
   notes: string | null;
   created_at: string;
   items: OrderItemRow[];
@@ -316,7 +334,7 @@ export async function fetchOrders(): Promise<{ data?: OrderRow[]; error?: string
     .select(`
       id, order_number, customer_id,
       customer_first_name, customer_last_name, customer_shop_name,
-      status, total, tax_rate, tax_amount, gross_total, notes, created_at,
+      status, total, tax_rate, tax_amount, gross_total, discount_pct, discount_amount, notes, created_at,
       order_items (
         id, product_id, product_name_de, product_image_url,
         product_sku, product_description, quantity, unit_price, line_total, sort_order
@@ -349,7 +367,7 @@ export async function fetchOrderById(orderId: string): Promise<{ data?: OrderRow
     .select(`
       id, order_number, customer_id,
       customer_first_name, customer_last_name, customer_shop_name,
-      status, total, tax_rate, tax_amount, gross_total, notes, created_at,
+      status, total, tax_rate, tax_amount, gross_total, discount_pct, discount_amount, notes, created_at,
       order_items (
         id, product_id, product_name_de, product_image_url,
         product_sku, product_description, quantity, unit_price, line_total, sort_order

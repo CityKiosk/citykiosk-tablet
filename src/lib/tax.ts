@@ -19,3 +19,28 @@ export function calculateTax(net: number, ratePercent: number = DEFAULT_TAX_RATE
   const gross = Math.round((net + tax) * 100) / 100;
   return { tax, gross };
 }
+
+/** Allowed range for the owner's order-level discount (percent). Server
+ *  enforces the same range; keep the UI clamp in sync with the DB CHECK
+ *  constraint in 20260515_order_discount.sql. */
+export const MAX_DISCOUNT_PCT = 20;
+
+/** Apply an order-level percentage discount to a pre-discount net subtotal
+ *  and recompute VAT + gross. Returns rounded values matching what is
+ *  stored on the order row. */
+export function applyDiscount(
+  subtotal: number,
+  discountPct: number,
+  ratePercent: number = DEFAULT_TAX_RATE,
+): {
+  discountAmount: number;
+  net: number;
+  tax: number;
+  gross: number;
+} {
+  const clampedPct = Math.max(0, Math.min(MAX_DISCOUNT_PCT, Math.trunc(discountPct)));
+  const discountAmount = Math.round(subtotal * clampedPct) / 100;
+  const net = Math.round((subtotal - discountAmount) * 100) / 100;
+  const { tax, gross } = calculateTax(net, ratePercent);
+  return { discountAmount, net, tax, gross };
+}

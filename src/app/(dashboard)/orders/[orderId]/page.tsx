@@ -33,6 +33,8 @@ function toExportOrder(o: OrderRow): Order {
     taxRate: o.tax_rate,
     taxAmount: o.tax_amount,
     grossTotal: o.gross_total,
+    discountPct: o.discount_pct ?? 0,
+    discountAmount: o.discount_amount ?? 0,
     createdAt: o.created_at,
   };
 }
@@ -164,7 +166,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               </div>
               {order.tax_rate > 0 && (
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 tabular text-right">
-                  {t.catalog.cartSubtotal} {formatPrice(order.total)} · {t.catalog.cartTaxLine(order.tax_rate)} {formatPrice(order.tax_amount)}
+                  {t.catalog.cartSubtotal} {formatPrice(order.total + (order.discount_amount ?? 0))}
+                  {order.discount_pct > 0 && ` · ${t.discount.rowLabel(order.discount_pct)} −${formatPrice(order.discount_amount)}`}
+                  {" · "}{t.catalog.cartTaxLine(order.tax_rate)} {formatPrice(order.tax_amount)}
                 </div>
               )}
             </div>
@@ -264,9 +268,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
                     {t.catalog.cartSubtotal}
                   </td>
                   <td className="tabular px-5 py-2 text-right text-xs text-slate-600 dark:text-slate-400">
-                    {formatPrice(order.total)}
+                    {formatPrice(order.total + (order.discount_amount ?? 0))}
                   </td>
                 </tr>
+                {order.discount_pct > 0 && (
+                  <tr className="bg-slate-50 dark:bg-slate-900/50">
+                    <td className="px-5 py-2 text-right text-xs text-slate-500 dark:text-slate-400" colSpan={4}>
+                      {t.discount.rowLabel(order.discount_pct)}
+                    </td>
+                    <td className="tabular px-5 py-2 text-right text-xs text-slate-600 dark:text-slate-400">
+                      −{formatPrice(order.discount_amount)}
+                    </td>
+                  </tr>
+                )}
                 <tr className="bg-slate-50 dark:bg-slate-900/50">
                   <td className="px-5 py-2 text-right text-xs text-slate-500 dark:text-slate-400" colSpan={4}>
                     {t.catalog.cartTaxLine(order.tax_rate)}
@@ -329,8 +343,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
             <>
               <li className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 dark:text-slate-400">
                 <span>{t.catalog.cartSubtotal}</span>
-                <span className="tabular">{formatPrice(order.total)}</span>
+                <span className="tabular">{formatPrice(order.total + (order.discount_amount ?? 0))}</span>
               </li>
+              {order.discount_pct > 0 && (
+                <li className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 dark:text-slate-400">
+                  <span>{t.discount.rowLabel(order.discount_pct)}</span>
+                  <span className="tabular">−{formatPrice(order.discount_amount)}</span>
+                </li>
+              )}
               <li className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-500 dark:text-slate-400">
                 <span>{t.catalog.cartTaxLine(order.tax_rate)}</span>
                 <span className="tabular">{formatPrice(order.tax_amount)}</span>

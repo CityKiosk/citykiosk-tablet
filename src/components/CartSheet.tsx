@@ -1,27 +1,33 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useCart } from "@/lib/cartStore";
+import { useCart, useCartDiscount } from "@/lib/cartStore";
 import { useI18n } from "./I18nProvider";
 import { formatPrice } from "@/lib/i18n";
 import QtyControl from "./QtyControl";
 import { XIcon } from "./icons";
 import OrderDialog from "./OrderDialog";
+import DiscountEditor from "./DiscountEditor";
 import {
   fetchCartProducts,
   type CartProduct,
 } from "@/app/(dashboard)/catalog/actions";
 import { lockBodyScroll } from "@/lib/scrollLock";
-import { DEFAULT_TAX_RATE, calculateTax } from "@/lib/tax";
+import { DEFAULT_TAX_RATE, applyDiscount } from "@/lib/tax";
+import { useLongPress } from "@/lib/useLongPress";
 
 export default function CartSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const { quantities, setQty, clear, totalCount, kindCount } = useCart();
+  const [discountPct, setDiscountPct] = useCartDiscount();
   const sheetRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [dragY, setDragY] = useState(0);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+
+  const longPressHandlers = useLongPress(() => setDiscountOpen(true));
 
   const [allProducts, setAllProducts] = useState<CartProduct[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -220,7 +226,11 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
             // Net = item total before VAT; gross = what the customer pays.
             // Computed client-side for the cart preview; the server stamps
             // the authoritative amount on createOrder.
-            const { tax, gross } = calculateTax(total, DEFAULT_TAX_RATE);
+            const { discountAmount, tax, gross } = applyDiscount(
+              total,
+              discountPct,
+              DEFAULT_TAX_RATE,
+            );
             return (
               <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-t-2xl">
                 <dl className="space-y-1 mb-3 text-sm">
@@ -228,14 +238,23 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
                     <dt>{t.catalog.cartSubtotal}</dt>
                     <dd className="tabular">{formatPrice(total)}</dd>
                   </div>
+                  {discountPct > 0 && (
+                    <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                      <dt>{t.discount.rowLabel(discountPct)}</dt>
+                      <dd className="tabular">−{formatPrice(discountAmount)}</dd>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                     <dt>{t.catalog.cartTaxLine(DEFAULT_TAX_RATE)}</dt>
                     <dd className="tabular">{formatPrice(tax)}</dd>
                   </div>
                 </dl>
                 <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
+                  <div className="select-none" style={{ WebkitTouchCallout: "none" } as React.CSSProperties}>
+                    <div
+                      {...longPressHandlers}
+                      className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium cursor-default"
+                    >
                       {t.catalog.cartTotal}
                     </div>
                     <div className="tabular text-xl font-semibold text-slate-900 dark:text-slate-50">
@@ -260,12 +279,21 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
         <OrderDialog
           items={items}
           total={total}
+          discountPct={discountPct}
           onClose={() => setOrderOpen(false)}
           onSaved={() => {
             clear();
             setOrderOpen(false);
             onClose();
           }}
+        />
+      )}
+
+      {discountOpen && (
+        <DiscountEditor
+          value={discountPct}
+          onApply={setDiscountPct}
+          onClose={() => setDiscountOpen(false)}
         />
       )}
     </>

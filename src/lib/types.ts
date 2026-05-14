@@ -45,7 +45,7 @@ export type Order = {
   customerName: string;
   shopName: string;
   items: OrderItem[];
-  /** Net total (sum of line totals before VAT). */
+  /** Net total AFTER discount (sum of line totals minus discountAmount). */
   total: number;
   /** Applied VAT rate as a percent (e.g. 19). 0 means legacy/no breakdown. */
   taxRate: number;
@@ -53,5 +53,9 @@ export type Order = {
   taxAmount: number;
   /** Gross total = total + taxAmount. What the customer pays. */
   grossTotal: number;
+  /** Order-level discount percentage applied (0..20). 0 = no discount. */
+  discountPct: number;
+  /** Discount amount in euro (subtotal × discountPct/100). 0 if no discount. */
+  discountAmount: number;
   createdAt: string;
 };

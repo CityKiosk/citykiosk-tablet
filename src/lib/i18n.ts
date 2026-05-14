@@ -191,6 +191,14 @@ type LocaleDict = {
     discardChanges: string;
   };
   common: { close: string; cancel: string; confirm: string; save: string; delete: string; loading: string };
+  discount: {
+    title: string;
+    label: string;
+    apply: string;
+    remove: string;
+    removeShort: string;
+    rowLabel: (pct: number) => string;
+  };
   dashboard: {
     title: string;
     welcome: string;
@@ -524,6 +532,14 @@ export const dict: Record<Locale, LocaleDict> = {
       discardChanges: "Änderungen nicht gespeichert. Trotzdem wechseln?",
     },
     common: { close: "Schließen", cancel: "Abbrechen", confirm: "Bestätigen", save: "Speichern", delete: "Löschen", loading: "Lädt…" },
+    discount: {
+      title: "Rabatt",
+      label: "Rabatt in Prozent",
+      apply: "Anwenden",
+      remove: "Entfernen",
+      removeShort: "Entf.",
+      rowLabel: (pct: number) => `Rabatt ${pct} %`,
+    },
     dashboard: {
       title: "Übersicht",
       welcome: "Willkommen",

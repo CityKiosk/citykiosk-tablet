@@ -233,6 +233,8 @@ export type Database = {
           customer_id: string | null
           customer_last_name: string | null
           customer_shop_name: string
+          discount_amount: number
+          discount_pct: number
           gross_total: number
           id: string
           idempotency_key: string | null
@@ -251,6 +253,8 @@ export type Database = {
           customer_id?: string | null
           customer_last_name?: string | null
           customer_shop_name: string
+          discount_amount?: number
+          discount_pct?: number
           gross_total?: number
           id?: string
           idempotency_key?: string | null
@@ -269,6 +273,8 @@ export type Database = {
           customer_id?: string | null
           customer_last_name?: string | null
           customer_shop_name?: string
+          discount_amount?: number
+          discount_pct?: number
           gross_total?: number
           id?: string
           idempotency_key?: string | null

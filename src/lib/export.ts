@@ -181,9 +181,18 @@ async function buildOrderPdf(order: Order, locale: Locale): Promise<JsPdf> {
   );
 
   if (order.taxRate > 0) {
+    // Show the pre-discount net so the receipt reflects what the customer
+    // would have paid without the rabate — keeps `order.total` (post-discount
+    // net) semantics consistent with the rest of the app.
+    const subtotalBeforeDiscount = Math.round((order.total + (order.discountAmount ?? 0)) * 100) / 100;
     doc.text("Zwischensumme (netto)", 140, y);
-    doc.text(formatPrice(order.total), 196, y, { align: "right" });
+    doc.text(formatPrice(subtotalBeforeDiscount), 196, y, { align: "right" });
     y += 5;
+    if (order.discountPct && order.discountPct > 0) {
+      doc.text(`Rabatt ${order.discountPct}%`, 140, y);
+      doc.text(`-${formatPrice(order.discountAmount)}`, 196, y, { align: "right" });
+      y += 5;
+    }
     doc.text(`MwSt ${order.taxRate}%`, 140, y);
     doc.text(formatPrice(order.taxAmount), 196, y, { align: "right" });
     y += 7;

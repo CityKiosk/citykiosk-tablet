@@ -18,6 +18,7 @@ export type PendingOrder = {
     customer_last_name?: string;
     customer_shop_name: string;
     notes?: string;
+    discount_pct?: number;
     items: {
       product_id: string;
       product_name_de: string;
