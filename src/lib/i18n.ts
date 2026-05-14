@@ -173,6 +173,8 @@ type LocaleDict = {
     next: string;
     noProducts: string;
     addingSoon: string;
+    contents: string;
+    uncategorized: string;
   };
   add2: {
     dimensions: string;
@@ -502,6 +504,8 @@ export const dict: Record<Locale, LocaleDict> = {
       next: "Weiter",
       noProducts: "Noch keine Produkte",
       addingSoon: "Produkte werden bald hinzugefügt",
+      contents: "Inhalt",
+      uncategorized: "Sonstige",
     },
     add2: {
       dimensions: "Maße",

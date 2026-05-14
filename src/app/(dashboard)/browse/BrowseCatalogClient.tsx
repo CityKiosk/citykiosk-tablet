@@ -16,7 +16,7 @@ import type { Category, Product } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import { FlipPage } from "@/components/Flipbook";
 import { useDisplayFields } from "@/components/DisplayFieldsProvider";
-import { PackageIcon, ChevronRightIcon, XIcon, ShareIcon } from "@/components/icons";
+import { PackageIcon, ChevronRightIcon, XIcon, ShareIcon, MenuIcon } from "@/components/icons";
 import { useToast } from "@/components/Toast";
 import { getOrCreateShareLink } from "./actions";
 import { QRCodeSVG } from "qrcode.react";
@@ -232,6 +232,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
   const [currentPage, setCurrentPage] = useState(0);
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const flipRef = useRef<{ pageFlip(): { flipNext(): void; flipPrev(): void; turnToPage(n: number): void } } | null>(null);
 
@@ -289,18 +290,42 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
 
   const totalPages = pages.length;
 
+  // Navigation targets: first page index for each category (cover) + uncategorized bucket
+  const navTargets = useMemo(() => {
+    const targets: { key: string; label: string; pageIndex: number }[] = [];
+    let uncategorizedIdx = -1;
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      if (p.kind === "cover") {
+        targets.push({ key: p.category.id, label: p.category.name_de, pageIndex: i });
+      } else if (p.kind === "grid" && !p.category && uncategorizedIdx === -1) {
+        uncategorizedIdx = i;
+      }
+    }
+    if (uncategorizedIdx !== -1) {
+      targets.push({ key: "__uncategorized__", label: t.browse.uncategorized, pageIndex: uncategorizedIdx });
+    }
+    return targets;
+  }, [pages, t.browse.uncategorized]);
+
   function goPrev() { try { flipRef.current?.pageFlip()?.flipPrev(); } catch {} }
   function goNext() { try { flipRef.current?.pageFlip()?.flipNext(); } catch {} }
+  function jumpToPage(idx: number) {
+    try { flipRef.current?.pageFlip()?.turnToPage(idx); } catch {}
+    setMenuOpen(false);
+  }
 
   // Keyboard navigation for accessibility
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && menuOpen) { setMenuOpen(false); return; }
+      if (menuOpen) return;
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft") goPrev();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [menuOpen]);
 
   return (
     <div
@@ -309,8 +334,21 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
       role="region"
       aria-label={t.nav.browse}
     >
-      {/* Minimal top bar — share + exit */}
-      <div className="flex-shrink-0 flex items-center justify-end gap-2 pb-2">
+      {/* Minimal top bar — contents + share + exit */}
+      <div className="flex-shrink-0 flex items-center justify-between gap-2 pb-2">
+        {navTargets.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            className="cursor-pointer h-10 px-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+          >
+            <MenuIcon width={16} height={16} />
+            <span>{t.browse.contents}</span>
+          </button>
+        ) : <span />}
+        <div className="flex items-center gap-2">
         <button
           type="button"
           disabled={sharing}
@@ -338,6 +376,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
         >
           <XIcon width={18} height={18} />
         </Link>
+        </div>
       </div>
       {products.length === 0 ? (
         <EmptyState
@@ -349,10 +388,10 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
         <>
           <div className="flex-1 min-h-0 flex items-center justify-center">
             <div
-              className="portrait:aspect-[595/842] landscape:aspect-[1190/842] h-full max-h-full max-w-full"
+              className="portrait:aspect-[750/842] landscape:aspect-[1500/842] h-full max-h-full max-w-full"
             >
               <Flipbook
-                width={595}
+                width={750}
                 height={842}
                 flipRef={flipRef}
                 onFlip={(idx) => setCurrentPage(idx)}
@@ -415,6 +454,49 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
             </button>
           </div>
         </>
+      )}
+
+      {/* Contents (categories) overlay */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-16"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.browse.contents}
+        >
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-sm max-h-[80vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-800">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t.browse.contents}</h2>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                aria-label={t.common.close}
+                className="cursor-pointer w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+              >
+                <XIcon width={16} height={16} />
+              </button>
+            </div>
+            <ul className="flex-1 overflow-y-auto py-2">
+              {navTargets.map((target) => (
+                <li key={target.key}>
+                  <button
+                    type="button"
+                    onClick={() => jumpToPage(target.pageIndex)}
+                    className="cursor-pointer w-full flex items-center justify-between gap-3 px-5 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:bg-slate-100 dark:focus-visible:bg-slate-800 transition-colors"
+                  >
+                    <span className="truncate">{target.label}</span>
+                    <ChevronRightIcon width={14} height={14} className="flex-shrink-0 text-slate-400 dark:text-slate-500" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       )}
 
       {/* QR Code + Link Share Modal */}
