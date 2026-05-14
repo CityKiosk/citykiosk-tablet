@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // Without this, the client Router Cache can serve a stale RSC payload after
+  // a server action invalidates server-side data — e.g. updating stock and
+  // then clicking the Lager link in the sidebar would show the old numbers
+  // until the cache aged out.
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+      static: 180,
+    },
+  },
 };
 
 export default withSentryConfig(nextConfig, {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/I18nProvider";
 import { useToast } from "@/components/Toast";
 import PageHeader from "@/components/PageHeader";
@@ -31,6 +32,7 @@ const UNLOCK_KEY = "souvenir_admin_unlocked_stock";
 export function StockClient({ products: initialProducts, categories }: Props) {
   const { t, locale } = useI18n();
   const toast = useToast();
+  const router = useRouter();
 
   const [unlocked, setUnlocked] = useState(false);
 
@@ -99,6 +101,9 @@ export function StockClient({ products: initialProducts, categories }: Props) {
       setProducts((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, stock: result.stock! } : p)),
       );
+      // Bust the client Router Cache for /stock so re-clicking the sidebar
+      // Lager link shows the fresh value instead of the pre-save snapshot.
+      router.refresh();
       // Undo toast — reverts to previous stock on click.
       toast.showWithAction(t.stock.saved, {
         label: t.stock.undo,
@@ -111,12 +116,13 @@ export function StockClient({ products: initialProducts, categories }: Props) {
           setProducts((prev) =>
             prev.map((p) => (p.id === productId ? { ...p, stock: undo.stock! } : p)),
           );
+          router.refresh();
           toast.show(t.stock.undone);
         },
       });
       return result.stock;
     },
-    [t.stock.saved, t.stock.saveFailed, t.stock.undo, t.stock.undone, toast],
+    [router, t.stock.saved, t.stock.saveFailed, t.stock.undo, t.stock.undone, toast],
   );
 
   if (!unlocked) {
