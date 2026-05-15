@@ -93,13 +93,15 @@ export default function OrderDialog({
   const [shopName, setShopName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Once customers load, set defaults
+  // Once customers load, switch to select mode but force an explicit pick —
+  // pre-selecting the first sorted customer risks an accidental order against
+  // the wrong account if the owner taps "Bestellung bestätigen" too fast.
   useEffect(() => {
     if (!loadingCustomers && customers.length > 0) {
       setMode("select");
-      setSelectedId(sortedCustomers[0]?.id || "");
+      setSelectedId("");
     }
-  }, [loadingCustomers, customers.length, sortedCustomers]);
+  }, [loadingCustomers, customers.length]);
 
   const inputCls =
     "w-full h-11 px-3 border border-slate-300 dark:border-slate-700 dark:bg-slate-800 rounded-lg text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60";
@@ -276,7 +278,11 @@ export default function OrderDialog({
                   value={selectedId}
                   onChange={(e) => setSelectedId(e.target.value)}
                   className={inputCls}
+                  required
                 >
+                  <option value="" disabled>
+                    — {t.order.selectCustomer} —
+                  </option>
                   {sortedCustomers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.shop_name} — {c.first_name}{c.last_name ? ` ${c.last_name}` : ""}
