@@ -69,7 +69,7 @@ function BrowseCardImpl({ product, category: _category }: { product: Product; ca
   const showMeta = showDimensions || showPackaging;
 
   return (
-    <article className="h-full flex flex-col rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card p-1">
+    <article className="h-full flex flex-col rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card p-2">
       <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 overflow-hidden rounded-lg">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -79,7 +79,7 @@ function BrowseCardImpl({ product, category: _category }: { product: Product; ca
           className="w-full h-full object-cover"
         />
       </div>
-      <div className="flex-shrink-0 px-2 py-1 text-center">
+      <div className="flex-shrink-0 px-3 py-2 text-center">
         {fields.name && (
           <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-50 leading-tight line-clamp-1 tabular">
             {name}
@@ -187,7 +187,7 @@ function CategoryCover({ category, sample }: { category: ServerCategory; sample:
 
 function PageGrid({ items, catById }: { items: ServerProduct[]; catById: Map<string, ServerCategory> }) {
   return (
-    <div className="h-full grid grid-cols-2 grid-rows-2 gap-1.5">
+    <div className="h-full grid grid-cols-2 grid-rows-2 gap-3">
       {items.map((p) => {
         const cat = p.category_id ? catById.get(p.category_id) : undefined;
         return (
@@ -385,7 +385,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
                     key={idx}
                     className={
                       page.kind === "grid"
-                        ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1.5"
+                        ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3"
                         : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden"
                     }
                     isActive={idx === currentPage}

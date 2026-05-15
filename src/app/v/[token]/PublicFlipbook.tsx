@@ -102,7 +102,7 @@ function CardImpl({ product, displayFields }: { product: Product; displayFields:
   const showMeta = showDimensions || showPackaging;
 
   return (
-    <article className="h-full flex flex-col rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card p-1">
+    <article className="h-full flex flex-col rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-card p-2">
       <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 overflow-hidden rounded-lg">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {product.image_url && (
@@ -217,7 +217,7 @@ function Bookmark({ category, side }: { category: Category; side: "left" | "righ
 // ── Grid ──
 function Grid({ items, displayFields }: { items: Product[]; displayFields: DisplayFields }) {
   return (
-    <div className="h-full grid grid-cols-2 grid-rows-2 gap-1.5 overflow-hidden">
+    <div className="h-full grid grid-cols-2 grid-rows-2 gap-3 overflow-hidden">
       {items.map((p) => <Card key={p.id} product={p} displayFields={displayFields} />)}
     </div>
   );
@@ -348,7 +348,7 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
                 key={idx}
                 className={
                   page.kind === "grid"
-                    ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1.5"
+                    ? "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3"
                     : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden"
                 }
                 isActive={idx === currentPage}
