@@ -15,7 +15,7 @@ import { formatPrice, getProductName } from "@/lib/i18n";
 import type { Category, Product } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import { FlipPage } from "@/components/Flipbook";
-import LegalPage from "@/components/LegalPage";
+import LegalPage, { LEGAL_PAGE_COUNT } from "@/components/LegalPage";
 import { useDisplayFields } from "@/components/DisplayFieldsProvider";
 import { PackageIcon, ChevronRightIcon, XIcon, ShareIcon, MenuIcon } from "@/components/icons";
 import { useToast } from "@/components/Toast";
@@ -227,7 +227,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
   type PageItem =
     | { kind: "cover"; category: ServerCategory; sample: ServerProduct[] }
     | { kind: "grid"; items: ServerProduct[]; category?: ServerCategory }
-    | { kind: "legal" };
+    | { kind: "legal"; part: 1 | 2 };
 
   const pages = useMemo<PageItem[]>(() => {
     const collator = new Intl.Collator("de", { numeric: true, sensitivity: "base" });
@@ -271,9 +271,11 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
         result.push({ kind: "grid", items: chunkItems });
       }
     }
-    // Legal page as the very last page
+    // Legal pages (2) at the very end
     if (result.length > 0) {
-      result.push({ kind: "legal" });
+      for (let p = 1; p <= LEGAL_PAGE_COUNT; p++) {
+        result.push({ kind: "legal", part: p as 1 | 2 });
+      }
     }
     return result;
   }, [products, catById]);
@@ -291,7 +293,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
         targets.push({ key: p.category.id, label: p.category.name_de, pageIndex: i });
       } else if (p.kind === "grid" && !p.category && uncategorizedIdx === -1) {
         uncategorizedIdx = i;
-      } else if (p.kind === "legal") {
+      } else if (p.kind === "legal" && p.part === 1) {
         legalIdx = i;
       }
     }
@@ -391,7 +393,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
                     {page.kind === "cover" ? (
                       <CategoryCover category={page.category} sample={page.sample} />
                     ) : page.kind === "legal" ? (
-                      <LegalPage />
+                      <LegalPage part={page.part} />
                     ) : (
                       <div className="relative h-full">
                         <PageGrid items={page.items} catById={catById} />

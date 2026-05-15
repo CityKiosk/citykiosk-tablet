@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState, memo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { FlipPage } from "@/components/Flipbook";
-import LegalPage from "@/components/LegalPage";
+import LegalPage, { LEGAL_PAGE_COUNT } from "@/components/LegalPage";
 import { formatPrice } from "@/lib/i18n";
 import { ChevronRightIcon, SunIcon, MoonIcon, MenuIcon, XIcon } from "@/components/icons";
 
@@ -227,7 +227,7 @@ function Grid({ items, displayFields }: { items: Product[]; displayFields: Displ
 type PageItem =
   | { kind: "cover"; category: Category; sample: Product[] }
   | { kind: "grid"; items: Product[]; category?: Category }
-  | { kind: "legal" };
+  | { kind: "legal"; part: 1 | 2 };
 
 export default function PublicFlipbook({ products, categories, displayFields }: { products: Product[]; categories: Category[]; displayFields: DisplayFields }) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -274,7 +274,9 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
       }
     }
     if (result.length > 0) {
-      result.push({ kind: "legal" });
+      for (let p = 1; p <= LEGAL_PAGE_COUNT; p++) {
+        result.push({ kind: "legal", part: p as 1 | 2 });
+      }
     }
     return result;
   }, [products, catById]);
@@ -292,7 +294,7 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
         targets.push({ key: p.category.id, label: p.category.name_de, pageIndex: i });
       } else if (p.kind === "grid" && !p.category && uncategorizedIdx === -1) {
         uncategorizedIdx = i;
-      } else if (p.kind === "legal") {
+      } else if (p.kind === "legal" && p.part === 1) {
         legalIdx = i;
       }
     }
@@ -354,7 +356,7 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
                 {page.kind === "cover" ? (
                   <CoverPage category={page.category} sample={page.sample} />
                 ) : page.kind === "legal" ? (
-                  <LegalPage />
+                  <LegalPage part={page.part} />
                 ) : (
                   <div className="relative h-full">
                     <Grid items={page.items} displayFields={displayFields} />

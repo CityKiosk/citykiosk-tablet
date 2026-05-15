@@ -111,7 +111,18 @@ const SECTIONS: Section[] = [
   },
 ];
 
-export default function LegalPage() {
+export const LEGAL_PAGE_COUNT = 2;
+
+const PART_RANGES: Record<1 | 2, [number, number]> = {
+  1: [0, 6],   // § 1 – § 6
+  2: [6, 11],  // § 7 – § 11
+};
+
+export default function LegalPage({ part = 1 }: { part?: 1 | 2 }) {
+  const [from, to] = PART_RANGES[part];
+  const sections = SECTIONS.slice(from, to);
+  const isFirst = part === 1;
+
   return (
     <div className="h-full flex flex-col px-6 py-5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
       <div className="flex-shrink-0 text-center pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
@@ -120,12 +131,17 @@ export default function LegalPage() {
         </div>
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">
           Allgemeine Geschäftsbedingungen
+          {!isFirst && (
+            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+              (Fortsetzung)
+            </span>
+          )}
         </h2>
       </div>
-      <div className="flex-1 min-h-0 columns-2 gap-5 text-[9px] leading-snug overflow-hidden">
-        {SECTIONS.map((s) => (
-          <section key={s.id} className="break-inside-avoid mb-2.5">
-            <h3 className="font-semibold text-[10px] mb-0.5 text-slate-900 dark:text-slate-50">
+      <div className="flex-1 min-h-0 columns-2 gap-5 text-[10.5px] leading-relaxed overflow-hidden">
+        {sections.map((s) => (
+          <section key={s.id} className="break-inside-avoid mb-3">
+            <h3 className="font-semibold text-[11.5px] mb-1 text-slate-900 dark:text-slate-50">
               {s.title}
             </h3>
             {s.items.length === 1 ? (
@@ -133,7 +149,7 @@ export default function LegalPage() {
                 {s.items[0]}
               </p>
             ) : (
-              <ol className="list-decimal pl-3.5 space-y-0.5">
+              <ol className="list-decimal pl-4 space-y-1">
                 {s.items.map((item, i) => (
                   <li
                     key={i}
@@ -147,6 +163,9 @@ export default function LegalPage() {
             )}
           </section>
         ))}
+      </div>
+      <div className="flex-shrink-0 text-center text-[9px] text-slate-500 dark:text-slate-400 mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+        Seite {part} / {LEGAL_PAGE_COUNT}
       </div>
     </div>
   );
