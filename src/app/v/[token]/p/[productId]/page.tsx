@@ -1,0 +1,53 @@
+// ============================================================================
+// Public Product Detail Page — full-screen single product (no auth)
+// ============================================================================
+// Reached from the mobile catalog list (PublicCatalogList card link).
+// Shareable URL: customers can paste a specific product link into WhatsApp.
+// Reuses the same RPC payload that fuels the list/flipbook so we don't add a
+// new SECURITY DEFINER function for a single lookup.
+// ============================================================================
+
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { DISPLAY_FIELD_DEFAULTS } from "@/lib/displayFields";
+import PublicProductDetail from "./PublicProductDetail";
+
+export const revalidate = 60;
+
+type PageProps = {
+  params: Promise<{ token: string; productId: string }>;
+};
+
+export default async function PublicProductPage({ params }: PageProps) {
+  const { token, productId } = await params;
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(token) || !uuidRegex.test(productId)) notFound();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_public_catalog", {
+    share_token: token,
+  });
+
+  if (error || !data) notFound();
+
+  const products = data.products ?? [];
+  const categories = data.categories ?? [];
+  const displayFields = data.display_fields ?? DISPLAY_FIELD_DEFAULTS;
+
+  const product = products.find((p: { id: string }) => p.id === productId);
+  if (!product) notFound();
+
+  const category = product.category_id
+    ? categories.find((c: { id: string }) => c.id === product.category_id) ?? null
+    : null;
+
+  return (
+    <PublicProductDetail
+      token={token}
+      product={product}
+      category={category}
+      displayFields={displayFields}
+    />
+  );
+}

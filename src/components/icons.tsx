@@ -186,6 +186,12 @@ export const GalleryHorizontalIcon = base(
     <rect x="16" y="4" width="6" height="16" rx="1" />
   </>
 );
+export const SmartphoneIcon = base(
+  <>
+    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+    <path d="M12 18h.01" />
+  </>
+);
 export const LogOutIcon = base(
   <>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

@@ -14,7 +14,10 @@ import Image from "next/image";
 import { FlipPage } from "@/components/Flipbook";
 import LegalPage, { LEGAL_PAGE_COUNT } from "@/components/LegalPage";
 import { formatPrice } from "@/lib/i18n";
-import { ChevronRightIcon, SunIcon, MoonIcon, MenuIcon, XIcon } from "@/components/icons";
+import { useRouter } from "next/navigation";
+import { ChevronRightIcon, MenuIcon, XIcon } from "@/components/icons";
+import SessionThemeToggle from "./SessionThemeToggle";
+import ViewToggle, { VIEW_PREF_KEY } from "./ViewToggle";
 
 const Flipbook = dynamic(() => import("@/components/Flipbook"), {
   ssr: false,
@@ -51,37 +54,6 @@ type DisplayFields = {
   price: boolean;
   packagingUnit: boolean;
 };
-
-// Per-session dark/light toggle. Does NOT persist — overrides only for this tab.
-// Customers who haven't toggled keep their OS preference (theme-init.js handles initial).
-function SessionThemeToggle() {
-  const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  if (!mounted) return null;
-
-  const toggle = () => {
-    const next = !document.documentElement.classList.contains("dark");
-    document.documentElement.classList.toggle("dark", next);
-    setIsDark(next);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={isDark ? "Helles Design" : "Dunkles Design"}
-      className="absolute right-0 top-1/2 -translate-y-1/2 w-9 h-9 inline-flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
-    >
-      {isDark ? <SunIcon width={18} height={18} /> : <MoonIcon width={18} height={18} />}
-    </button>
-  );
-}
 
 const PAGE_SIZE = 4;
 
@@ -229,7 +201,21 @@ type PageItem =
   | { kind: "grid"; items: Product[]; category?: Category }
   | { kind: "legal"; part: 1 | 2 };
 
-export default function PublicFlipbook({ products, categories, displayFields }: { products: Product[]; categories: Category[]; displayFields: DisplayFields }) {
+export default function PublicFlipbook({ token, products, categories, displayFields }: { token: string; products: Product[]; categories: Category[]; displayFields: DisplayFields }) {
+  const router = useRouter();
+
+  // Honor a persisted "list" preference from a prior visit — server-side UA
+  // detection already routed phones to /m, so this only fires on tablet/
+  // desktop devices where the customer explicitly chose the list view before.
+  useEffect(() => {
+    try {
+      const pref = localStorage.getItem(VIEW_PREF_KEY);
+      if (pref === "list") {
+        router.replace(`/v/${token}/m`);
+      }
+    } catch {}
+  }, [router, token]);
+
   const [currentPage, setCurrentPage] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const flipRef = useRef<{ pageFlip(): { flipNext(): void; flipPrev(): void; turnToPage(n: number): void } } | null>(null);
@@ -327,12 +313,15 @@ export default function PublicFlipbook({ products, categories, displayFields }: 
 
   return (
     <div className="flex flex-col p-3" style={{ height: "100dvh" }} role="region" aria-label="Produktkatalog">
-      {/* Header — branding + per-session theme toggle */}
+      {/* Header — branding + view toggle + per-session theme toggle */}
       <div className="flex-shrink-0 relative pb-2">
         <h1 className="text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide text-center">
           Souvenirs Berlin — Produktkatalog
         </h1>
-        <SessionThemeToggle />
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <ViewToggle current="flipbook" token={token} />
+          <SessionThemeToggle />
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 flex items-center justify-center relative">
