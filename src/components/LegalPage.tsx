@@ -2,77 +2,112 @@
 // LegalPage — Allgemeine Geschäftsbedingungen (AGB)
 // ============================================================================
 // Renders as the final page of the public catalog flipbook (and admin Vitrine).
-// Content is the AGB text exactly as in the printed City Kiosk catalog.
 // Locale always German — legal text is not translated.
 // ============================================================================
 
-type Section = { id: string; title: string; body: string };
+type Section = { id: string; title: string; items: string[] };
 
 const SECTIONS: Section[] = [
   {
     id: "1",
     title: "§ 1 Geltungsbereich",
-    body:
-      "Für die Geschäftsbeziehung zwischen City Kiosk und dem Käufer gelten ausschließlich die nachfolgenden Allgemeinen Geschäftsbedingungen in ihrer zum Zeitpunkt der Bestellung gültigen Fassung. Abweichende Bedingungen des Käufers erkennt City Kiosk nicht an, es sei denn, City Kiosk hätte ausdrücklich schriftlich ihrer Geltung zugestimmt.",
+    items: [
+      "Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für sämtliche Geschäftsbeziehungen zwischen der Sock Off Berlin Souvenirs GmbH (nachfolgend „Verkäufer“) und ihren Kunden.",
+      "Abweichende, entgegenstehende oder ergänzende Allgemeine Geschäftsbedingungen des Kunden werden nur dann Vertragsbestandteil, wenn ihrer Geltung ausdrücklich schriftlich zugestimmt wurde.",
+      "Diese AGB gelten in ihrer jeweils zum Zeitpunkt des Vertragsschlusses gültigen Fassung.",
+    ],
+  },
+  {
+    id: "2",
+    title: "§ 2 Vertragsschluss",
+    items: [
+      "Die Präsentation von Waren, Preislisten und Angeboten stellt kein rechtlich bindendes Angebot dar, sondern eine unverbindliche Aufforderung zur Bestellung.",
+      "Durch die Bestellung der Ware gibt der Kunde ein verbindliches Angebot zum Abschluss eines Kaufvertrags ab.",
+      "Der Vertrag kommt erst durch schriftliche Auftragsbestätigung oder durch Auslieferung der Ware zustande.",
+    ],
   },
   {
     id: "3",
-    title: "§ 3 Angebote",
-    body:
-      "Sämtliche Angebote und Preislisten sind freibleibend. Druckfehler und Irrtümer sowie Preisänderungen sind nicht ausgeschlossen. Kleine Abweichungen und technische Änderungen gegenüber unseren Abbildungen sind möglich.",
+    title: "§ 3 Preise und Angebote",
+    items: [
+      "Sämtliche Preise verstehen sich netto zuzüglich der jeweils geltenden gesetzlichen Mehrwertsteuer, sofern nicht ausdrücklich anders angegeben.",
+      "Preisänderungen, Druckfehler, technische Änderungen sowie Irrtümer bleiben vorbehalten.",
+      "Geringfügige Abweichungen bei Farben, Materialien, Größen oder Ausführungen gelten als handelsüblich und stellen keinen Mangel dar.",
+    ],
   },
   {
     id: "4",
-    title: "§ 4 Rücknahme",
-    body:
-      "Wir gewähren für fehlerhafte, nicht benutzte Ware ein Rückgaberecht innerhalb von 10 Tagen. Die Rückgabe ist nur in vollständigen Verpackungseinheiten möglich. Eine Rückgabe aufgrund des Nichtgefallens der Farbe oder des Motivs des Artikels wird nicht gewährt. Im Falle einer Rückgabe von Artikeln müssen andere Artikel im gleichen Warenwert erworben werden. Eine Barauszahlung ist ausgeschlossen.",
+    title: "§ 4 Lieferung und Versand",
+    items: [
+      "Lieferungen erfolgen zum frühestmöglichen Zeitpunkt, sofern keine abweichenden Lieferfristen vereinbart wurden.",
+      "Der Versand erfolgt nach Wahl des Verkäufers per Post, Paketdienst oder Spedition.",
+      "Die Gefahr des zufälligen Untergangs oder der zufälligen Verschlechterung der Ware geht mit Übergabe an das Transportunternehmen auf den Kunden über, sofern der Kunde Unternehmer im Sinne des § 14 BGB ist.",
+      "Lieferverzögerungen aufgrund höherer Gewalt oder sonstiger unvorhersehbarer Ereignisse, die außerhalb des Einflussbereichs des Verkäufers liegen, berechtigen nicht zu Schadensersatzansprüchen.",
+    ],
   },
   {
     id: "5",
-    title: "§ 5 Lieferung",
-    body:
-      "Lieferungen erfolgen zum frühstmöglichen Zeitpunkt. Der Versand erfolgt mit Post, Paketdienst oder Spedition. Zum Zeitpunkt der Übergabe an den Frachtführer geht die Gefahr des Verlustes, der Vernichtung und/oder der Beschädigung der Ware auf den Kunden über.",
+    title: "§ 5 Zahlung und Eigentumsvorbehalt",
+    items: [
+      "Rechnungen sind innerhalb von 10 Tagen ab Rechnungsdatum ohne Abzug zahlbar, sofern nichts anderes vereinbart wurde.",
+      "Der Verkäufer behält sich vor, Lieferungen ausschließlich gegen Vorkasse auszuführen.",
+      "Bei Zahlungsverzug ist der Verkäufer berechtigt, Verzugszinsen in gesetzlicher Höhe zu verlangen.",
+      "Zusätzlich können Mahnkosten in angemessener Höhe berechnet werden.",
+      "Die gelieferte Ware bleibt bis zur vollständigen Bezahlung sämtlicher Forderungen aus der Geschäftsbeziehung Eigentum der Sock Off Berlin Souvenirs GmbH.",
+    ],
   },
   {
     id: "6",
-    title: "§ 6 Fälligkeit und Zahlung",
-    body:
-      "Die ausgewiesenen Preise sind Stückpreise zuzüglich der gesetzlichen Mehrwertsteuer in Höhe von z. Zt. 19 %, zahlbar innerhalb von 10 Tagen ab Rechnungsstellung. Wir behalten uns das Recht vor, Bestellungen nur gegen Vorkasse entgegenzunehmen. Bei Zahlungsverzug erfolgt die Verrechnung von EUR 5,- Mahnspesen pro Mahnung. Nach drei erfolglosen Mahnversuchen wird die Forderung zur gerichtlichen Eintreibung unserem Anwalt übergeben. Die dort anfallenden Kosten gehen zu Lasten des rückständigen Kunden. Sämtliche gelieferte Ware bleibt bis zur vollständigen Bezahlung unser unverpfändbares Eigentum und kommt ausdrücklich mit verlängertem Eigentumsvorbehalt zur Auslieferung.",
+    title: "§ 6 Rückgabe und Reklamation",
+    items: [
+      "Reklamationen wegen offensichtlicher Mängel sind unverzüglich nach Erhalt der Ware schriftlich mitzuteilen.",
+      "Rückgaben werden ausschließlich nach vorheriger Absprache akzeptiert.",
+      "Individuell angefertigte oder personalisierte Produkte sind von Rückgabe und Umtausch ausgeschlossen, sofern kein gesetzlicher Mangel vorliegt.",
+      "Handelsübliche oder materialbedingte Abweichungen, insbesondere bei Naturmaterialien wie Baumwolle, stellen keinen Reklamationsgrund dar.",
+    ],
   },
   {
     id: "7",
-    title: "§ 7 Gültigkeit",
-    body: "Mit Vorliegen der jüngsten Preisliste verlieren alle vorangegangenen ihre Gültigkeit.",
+    title: "§ 7 Haftung",
+    items: [
+      "Die Sock Off Berlin Souvenirs GmbH haftet unbeschränkt bei Vorsatz und grober Fahrlässigkeit.",
+      "Ebenso haftet der Verkäufer unbeschränkt bei Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit sowie nach den Vorschriften des Produkthaftungsgesetzes.",
+      "Bei einfacher Fahrlässigkeit haftet der Verkäufer nur bei Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) und beschränkt auf den vertragstypischen, vorhersehbaren Schaden.",
+      "Eine Haftung für mittelbare Schäden, Folgeschäden oder entgangenen Gewinn ist – soweit gesetzlich zulässig – ausgeschlossen.",
+    ],
   },
   {
     id: "8",
-    title: "§ 8 Haftung",
-    body:
-      "Wir haften unbeschränkt für Schäden aufgrund Vorsatzes und grober Fahrlässigkeit. Wir haften ferner unbeschränkt für Schäden aufgrund der schuldhaften Verletzung von Leib, Leben oder Gesundheit sowie in allen Fällen von Verstößen gegen das Produkthaftungsgesetz. Für Fälle der einfachen Fahrlässigkeit übernehmen wir keine Haftung. Die Haftung für Folgeschäden ist, soweit gesetzlich zulässig, ausgeschlossen.",
+    title: "§ 8 Urheberrechte und Druckvorlagen",
+    items: [
+      "Stellt der Kunde Druckvorlagen, Logos, Motive oder sonstige Inhalte zur Verfügung, versichert er, dass dadurch keine Rechte Dritter verletzt werden.",
+      "Der Kunde stellt die Sock Off Berlin Souvenirs GmbH von sämtlichen Ansprüchen Dritter wegen Urheber-, Marken- oder sonstiger Rechtsverletzungen frei.",
+      "Entwürfe, Muster, Skizzen, Probedrucke und sonstige durch den Verkäufer erstellte Arbeitsmittel bleiben Eigentum der Sock Off Berlin Souvenirs GmbH, sofern nichts anderes schriftlich vereinbart wurde.",
+    ],
   },
   {
     id: "9",
-    title: "§ 9 Urheberrecht",
-    body:
-      "Bei Kundenaufträgen, bei denen der Kunde das Druckmotiv stellt, übernimmt der Auftraggeber die volle Verantwortung dafür, dass durch die Verwendung der von ihm vorgelegten Originale oder nach seinen Angaben hergestellten Vorlagen, Zeichnungen, Unterlagen nicht Rechte Dritter verletzt werden. Er stellt somit die Firma City Kiosk von allen etwaigen Regressansprüchen Dritter vollständig frei. Die von uns hergestellten Muster, Skizzen, Hilfsmittel, Entwürfe und Probedrucke bleiben unser Eigentum, insoweit dies nicht gesondert mit dem Auftraggeber vereinbart ist.",
+    title: "§ 9 Produkteigenschaften",
+    items: [
+      "Viele angebotene Produkte bestehen überwiegend aus Baumwolle oder anderen Naturmaterialien.",
+      "Materialbedingte Unterschiede hinsichtlich Farbe, Struktur, Elastizität, Gewicht oder Waschverhalten sind naturbedingt und stellen keinen Sachmangel dar.",
+    ],
   },
   {
     id: "10",
-    title: "§ 10 Besonderes",
-    body:
-      "Einige unserer Artikel werden überwiegend aus Baumwolle hergestellt. Baumwolle ist ein Naturprodukt. Die unterschiedliche Beschaffenheit aufgrund natürlicher Umstände wirkt sich auf das Farbverhalten, das Flächengewicht, die Elastizität sowie das Waschverhalten aus. Diese Schwankungen in Färbung, Gewicht und weiteren Eigenschaften sind üblich und stellen daher keinen Reklamationsgrund dar.",
+    title: "§ 10 Salvatorische Klausel",
+    items: [
+      "Sollte eine Bestimmung dieser AGB ganz oder teilweise unwirksam sein oder werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt. Anstelle der unwirksamen Regelung gilt die gesetzlich zulässige Regelung als vereinbart, die dem wirtschaftlichen Zweck am nächsten kommt.",
+    ],
   },
   {
     id: "11",
-    title: "§ 11 Salvatorische Klausel",
-    body:
-      "Sollten einzelne Bestimmungen dieser Allgemeinen Geschäftsbedingungen oder Teile davon unwirksam sein, so bleibt die Wirksamkeit der übrigen Bedingungen davon unberührt. Im Falle der Unwirksamkeit einzelner Bestimmungen gilt dasjenige als vereinbart, auf das sich die Parteien geeinigt hätten, hätten sie um die Unwirksamkeit gewusst.",
-  },
-  {
-    id: "12",
-    title: "§ 12 Anwendbares Recht",
-    body:
-      "Es gilt ausschließlich deutsches Recht. Für Streitigkeiten wird das zuständige Gericht der Stadt Berlin als Gerichtsstand und Erfüllungsort ausschließlich festgelegt.",
+    title: "§ 11 Anwendbares Recht und Gerichtsstand",
+    items: [
+      "Es gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.",
+      "Ist der Kunde Kaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen, ist Gerichtsstand für alle Streitigkeiten aus der Geschäftsbeziehung Berlin.",
+      "Erfüllungsort für Lieferungen und Zahlungen ist Berlin.",
+    ],
   },
 ];
 
@@ -81,26 +116,37 @@ export default function LegalPage() {
     <div className="h-full flex flex-col px-6 py-5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
       <div className="flex-shrink-0 text-center pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
         <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-sky-700 dark:text-sky-400">
-          City Kiosk
+          Sock Off Berlin Souvenirs GmbH
         </div>
         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mt-1">
           Allgemeine Geschäftsbedingungen
         </h2>
       </div>
-      <div className="flex-1 min-h-0 columns-2 gap-5 text-[9.5px] leading-snug overflow-hidden">
+      <div className="flex-1 min-h-0 columns-2 gap-5 text-[9px] leading-snug overflow-hidden">
         {SECTIONS.map((s) => (
           <section key={s.id} className="break-inside-avoid mb-2.5">
-            <h3 className="font-semibold text-[10.5px] mb-0.5 text-slate-900 dark:text-slate-50">
+            <h3 className="font-semibold text-[10px] mb-0.5 text-slate-900 dark:text-slate-50">
               {s.title}
             </h3>
-            <p className="text-justify hyphens-auto" style={{ hyphens: "auto" }}>
-              {s.body}
-            </p>
+            {s.items.length === 1 ? (
+              <p className="text-justify hyphens-auto" style={{ hyphens: "auto" }}>
+                {s.items[0]}
+              </p>
+            ) : (
+              <ol className="list-decimal pl-3.5 space-y-0.5">
+                {s.items.map((item, i) => (
+                  <li
+                    key={i}
+                    className="text-justify hyphens-auto"
+                    style={{ hyphens: "auto" }}
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
         ))}
-      </div>
-      <div className="flex-shrink-0 text-center text-[9px] text-slate-500 dark:text-slate-400 mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-        Stand: April 2019
       </div>
     </div>
   );
