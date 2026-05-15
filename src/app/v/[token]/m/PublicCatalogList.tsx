@@ -131,11 +131,11 @@ export default function PublicCatalogList({
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       {/* Sticky header — brand strip + theme + view toggle */}
       <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-        <div className="relative h-12 flex items-center justify-center px-3">
-          <h1 className="text-sm font-semibold text-slate-700 dark:text-slate-200 tracking-wide truncate">
+        <div className="h-12 flex items-center gap-2 px-3">
+          <h1 className="flex-1 min-w-0 text-sm font-semibold text-slate-700 dark:text-slate-200 tracking-wide truncate">
             Souvenirs Berlin — Produktkatalog
           </h1>
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className="flex-shrink-0 flex items-center gap-1">
             <ViewToggle current="list" token={token} />
             <SessionThemeToggle />
           </div>

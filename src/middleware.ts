@@ -11,7 +11,12 @@
 // ============================================================================
 
 import { updateSession } from '@/lib/supabase/middleware'
-import type { NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+
+// Phone-targeting UA regex used to route public catalog visitors to the
+// mobile list view. iPads and Android tablets (no "Mobile" token) stay on
+// the flipbook.
+const PHONE_UA = /iPhone|Android.+Mobile|Windows Phone|IEMobile|BlackBerry|Mobi/i
 
 function applySecurityHeaders(response: import('next/server').NextResponse, isDev: boolean) {
   response.headers.set('X-Frame-Options', 'DENY')
@@ -44,8 +49,35 @@ function applySecurityHeaders(response: import('next/server').NextResponse, isDe
   response.headers.set('Content-Security-Policy', csp)
 }
 
+// Match the public catalog token route (and ONLY the base — not /m or /p
+// subroutes, which already render the right view for the device).
+const PUBLIC_CATALOG_BASE = /^\/v\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i
+
 export async function middleware(request: NextRequest) {
   const isDev = process.env.NODE_ENV === 'development'
+
+  // Phone redirect for the public share base URL. Runs before any page-level
+  // caching so the redirect is always evaluated per-request and the same URL
+  // can serve a flipbook to tablets/desktops and a list to phones.
+  // Honors ?view=flipbook|list as a manual override (debug + view toggle).
+  const { pathname, searchParams } = request.nextUrl
+  if (PUBLIC_CATALOG_BASE.test(pathname)) {
+    const view = searchParams.get('view')
+    if (view === 'list') {
+      const url = request.nextUrl.clone()
+      url.pathname = pathname.replace(/\/?$/, '/m')
+      url.searchParams.delete('view')
+      return NextResponse.redirect(url)
+    }
+    if (view !== 'flipbook') {
+      const ua = request.headers.get('user-agent') ?? ''
+      if (PHONE_UA.test(ua)) {
+        const url = request.nextUrl.clone()
+        url.pathname = pathname.replace(/\/?$/, '/m')
+        return NextResponse.redirect(url)
+      }
+    }
+  }
 
   // 1. Auth session refresh + route gating
   const response = await updateSession(request)

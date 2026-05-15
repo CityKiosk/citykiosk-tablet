@@ -314,11 +314,11 @@ export default function PublicFlipbook({ token, products, categories, displayFie
   return (
     <div className="flex flex-col p-3" style={{ height: "100dvh" }} role="region" aria-label="Produktkatalog">
       {/* Header — branding + view toggle + per-session theme toggle */}
-      <div className="flex-shrink-0 relative pb-2">
-        <h1 className="text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide text-center">
+      <div className="flex-shrink-0 flex items-center gap-2 pb-2">
+        <h1 className="flex-1 min-w-0 text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide truncate text-center">
           Souvenirs Berlin — Produktkatalog
         </h1>
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        <div className="flex-shrink-0 flex items-center gap-1">
           <ViewToggle current="flipbook" token={token} />
           <SessionThemeToggle />
         </div>

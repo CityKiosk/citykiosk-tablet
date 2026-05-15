@@ -58,16 +58,16 @@ export default function PublicProductDetail({
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur border-b border-slate-200 dark:border-slate-800">
-        <div className="relative h-12 flex items-center px-2">
+        <div className="h-12 flex items-center justify-between gap-2 px-2">
           <Link
             href={`/v/${token}/m`}
             aria-label="Zurück zum Katalog"
-            className="inline-flex items-center gap-1 h-9 px-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
+            className="flex-shrink-0 inline-flex items-center gap-1 h-9 px-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
           >
             <ChevronLeftIcon width={18} height={18} />
             <span>Katalog</span>
           </Link>
-          <SessionThemeToggle className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 inline-flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors" />
+          <SessionThemeToggle />
         </div>
       </header>
 
