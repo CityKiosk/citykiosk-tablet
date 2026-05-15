@@ -5,21 +5,12 @@
 // Reversible: source files on disk are untouched. Run with SQUARE=0 to restore
 // the un-cropped original (same pipeline as initial seed).
 //
-// TRIM mode: for categories where the product is tiny inside a huge background
-// (e.g. Steinmagnete). Auto-detects background with sharp.trim(), then pads
-// the result to a square so the product fills the frame without being cropped.
-//
 // Usage:
 //   DRY_RUN=1 SUPABASE_SERVICE_ROLE_KEY='sb_secret_...' \
 //     npx tsx scripts/retrim-category.ts <category-name> <source-root>
 //
 //   SUPABASE_SERVICE_ROLE_KEY='sb_secret_...' \
 //     npx tsx scripts/retrim-category.ts "Mauerlook" "$HOME/Desktop/souvenir-new-photos/KATALOG PNG"
-//
-// Trim + pad (Steinmagnete-style photos):
-//   TRIM=1 SUPABASE_SERVICE_ROLE_KEY='sb_secret_...' \
-//     npx tsx scripts/retrim-category.ts "Steinmagnete" "$HOME/Desktop/souvenir_photos"
-//   (TRIM_THRESHOLD default 30, TRIM_PAD_PCT default 5)
 //
 // Restore (no crop, original aspect):
 //   SQUARE=0 SUPABASE_SERVICE_ROLE_KEY='sb_secret_...' \
@@ -37,9 +28,6 @@ const CATEGORY = process.argv[2];
 const ROOT = process.argv[3];
 const DRY_RUN = process.env.DRY_RUN === "1";
 const SQUARE = process.env.SQUARE !== "0"; // default: center-crop to square ON
-const TRIM = process.env.TRIM === "1";       // auto-trim background + pad to square
-const TRIM_THRESHOLD = Number(process.env.TRIM_THRESHOLD ?? 30);
-const TRIM_PAD_PCT = Number(process.env.TRIM_PAD_PCT ?? 5);
 
 if (!CATEGORY || !ROOT) {
   console.error("Usage: npx tsx scripts/retrim-category.ts <category-name> <source-root>");
@@ -92,12 +80,7 @@ async function main() {
   console.log(`Category: ${CATEGORY}`);
   console.log(`Source:   ${ROOT}`);
   console.log(`Mode:     ${DRY_RUN ? "DRY RUN (no writes)" : "COMMIT"}`);
-  if (TRIM) {
-    console.log(`Crop:     TRIM (threshold=${TRIM_THRESHOLD}, pad=${TRIM_PAD_PCT}%) → pad to square`);
-  } else {
-    console.log(`Crop:     ${SQUARE ? "ON (center-crop to square)" : "OFF (restore original aspect)"}`);
-  }
-  console.log("");
+  console.log(`Crop:     ${SQUARE ? "ON (center-crop to square)" : "OFF (restore original aspect)"}\n`);
 
   const sourceFolder = await findSourceFolder();
   console.log(`Source folder resolved: ${sourceFolder}`);
@@ -146,52 +129,25 @@ async function main() {
 
     const buf = await readFile(path.join(sourceFolder, file));
 
-    let optimized: Buffer;
-    if (TRIM) {
-      // Auto-trim background, then pad to square so the product is fully
-      // visible (no crop) inside a square frame.
-      const trimmed = await sharp(buf)
-        .rotate()
-        .flatten({ background: "#ffffff" })
-        .trim({ threshold: TRIM_THRESHOLD })
-        .toBuffer();
-      const m = await sharp(trimmed).metadata();
-      const tw = m.width ?? 0;
-      const th = m.height ?? 0;
-      const pad = Math.round(Math.max(tw, th) * (TRIM_PAD_PCT / 100));
-      const side = Math.max(tw, th) + pad * 2;
-      optimized = await sharp(trimmed)
-        .extend({
-          top: Math.floor((side - th) / 2),
-          bottom: Math.ceil((side - th) / 2),
-          left: Math.floor((side - tw) / 2),
-          right: Math.ceil((side - tw) / 2),
-          background: "#ffffff",
-        })
-        .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-        .jpeg({ quality: 85, mozjpeg: true })
-        .toBuffer();
-    } else {
-      // Flatten transparent PNG to white (JPEG has no alpha channel).
-      let pipeline = sharp(buf).rotate().flatten({ background: "#ffffff" });
-      if (SQUARE) {
-        // Center-crop to a square using the shorter side. Then resize.
-        const meta = await sharp(buf).rotate().metadata();
-        const w = meta.width ?? 0;
-        const h = meta.height ?? 0;
-        const side = Math.min(w, h);
-        pipeline = pipeline.extract({
-          left: Math.floor((w - side) / 2),
-          top: Math.floor((h - side) / 2),
-          width: side,
-          height: side,
-        });
-      }
-      optimized = await pipeline
-        .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-        .jpeg({ quality: 85, mozjpeg: true })
-        .toBuffer();
+    // Flatten transparent PNG to white (JPEG has no alpha channel).
+    let pipeline = sharp(buf).rotate().flatten({ background: "#ffffff" });
+    if (SQUARE) {
+      // Center-crop to a square using the shorter side. Then resize.
+      const meta = await sharp(buf).rotate().metadata();
+      const w = meta.width ?? 0;
+      const h = meta.height ?? 0;
+      const side = Math.min(w, h);
+      pipeline = pipeline.extract({
+        left: Math.floor((w - side) / 2),
+        top: Math.floor((h - side) / 2),
+        width: side,
+        height: side,
+      });
     }
+    const optimized = await pipeline
+      .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85, mozjpeg: true })
+      .toBuffer();
 
     if (DRY_RUN) {
       console.log(`  [dry] "${name}" → ${storagePath} (${(optimized.length / 1024).toFixed(0)} KB)`);
