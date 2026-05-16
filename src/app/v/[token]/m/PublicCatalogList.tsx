@@ -110,6 +110,18 @@ export default function PublicCatalogList({
     return () => observer.disconnect();
   }, [loadMore, hasMore, visibleCount]);
 
+  // Keep the active category chip centered in the horizontal scroller so a
+  // customer returning from session-restored state (or tapping a chip that
+  // happens to be off-screen) doesn't lose track of where they are.
+  const chipNavRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = chipNavRef.current?.querySelector<HTMLElement>(
+      '[data-active="true"]',
+    );
+    if (!el) return;
+    el.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
+  }, [activeCat]);
+
   // Restore scroll only after the visible slice is rendered (otherwise the
   // saved Y would be clipped because the document hasn't grown yet).
   useScrollRestoration(token, filtered.length > 0);
@@ -150,8 +162,9 @@ export default function PublicCatalogList({
         </div>
 
         <nav
+          ref={chipNavRef}
           aria-label="Kategorie filtern"
-          className="overflow-x-auto scrollbar-none border-t border-slate-200 dark:border-slate-800"
+          className="overflow-x-auto scrollbar-none border-t border-slate-200 dark:border-slate-800 [mask-image:linear-gradient(to_right,black,black_calc(100%-32px),transparent)] [-webkit-mask-image:linear-gradient(to_right,black,black_calc(100%-32px),transparent)]"
         >
           <ul className="flex items-center gap-1.5 px-3 py-2 whitespace-nowrap">
             <li>
@@ -223,6 +236,7 @@ function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      data-active={active}
       className={`cursor-pointer h-8 px-3 rounded-full text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 ${
         active
           ? "bg-sky-700 text-white shadow-sm"
