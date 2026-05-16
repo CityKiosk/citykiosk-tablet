@@ -19,14 +19,32 @@ function storageKey(token: string) {
   return `souvenir_public_scroll:${token}`;
 }
 
+function isBackNavigation(): boolean {
+  if (typeof performance === "undefined") return false;
+  const entries = performance.getEntriesByType("navigation");
+  const first = entries[0] as PerformanceNavigationTiming | undefined;
+  return first?.type === "back_forward";
+}
+
 export function useScrollRestoration(token: string, ready: boolean) {
   const restoredRef = useRef(false);
 
   // Restore on mount, but only AFTER the consumer says it's ready (data has
   // hydrated + DOM has the right height). Otherwise the saved Y would be
   // clipped because the document is still short.
+  //
+  // Only back/forward navigations restore — reloads and direct visits start
+  // at the top, matching the customer's expectation that "opening the link
+  // again" feels fresh.
   useEffect(() => {
     if (!ready || restoredRef.current) return;
+    if (!isBackNavigation()) {
+      try {
+        sessionStorage.removeItem(storageKey(token));
+      } catch {}
+      restoredRef.current = true;
+      return;
+    }
     try {
       const raw = sessionStorage.getItem(storageKey(token));
       if (!raw) {

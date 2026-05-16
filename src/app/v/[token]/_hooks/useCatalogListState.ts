@@ -34,6 +34,17 @@ function storageKey(token: string) {
   return `souvenir_public_list:${token}`;
 }
 
+// Only "back/forward" navigations restore — refreshes and direct visits
+// reset to defaults. Without this, customers who filtered earlier in the
+// session would land on the cached filter (e.g. "Magnete") instead of the
+// expected "Alle" view on reload.
+function isBackNavigation(): boolean {
+  if (typeof performance === "undefined") return false;
+  const entries = performance.getEntriesByType("navigation");
+  const first = entries[0] as PerformanceNavigationTiming | undefined;
+  return first?.type === "back_forward";
+}
+
 function readPersisted(token: string): Persisted {
   if (typeof window === "undefined") return DEFAULTS;
   try {
@@ -62,10 +73,18 @@ export function useCatalogListState(token: string) {
   const hydratedRef = useRef(false);
 
   useEffect(() => {
-    const persisted = readPersisted(token);
-    setSearch(persisted.search);
-    setActiveCat(persisted.activeCat);
-    setVisibleCount(persisted.visibleCount);
+    if (isBackNavigation()) {
+      const persisted = readPersisted(token);
+      setSearch(persisted.search);
+      setActiveCat(persisted.activeCat);
+      setVisibleCount(persisted.visibleCount);
+    } else {
+      // Fresh visit or reload — defaults already set; wipe any stale state
+      // so the next save effect doesn't immediately overwrite with old data.
+      try {
+        sessionStorage.removeItem(storageKey(token));
+      } catch {}
+    }
     hydratedRef.current = true;
   }, [token]);
 
@@ -79,21 +98,32 @@ export function useCatalogListState(token: string) {
     } catch {}
   }, [token, search, activeCat, visibleCount]);
 
-  // Convenience: filter changes also reset pagination to first batch.
+  // Convenience: filter changes also reset pagination to first batch AND
+  // scroll the page to the top so the customer always sees the new result
+  // set from the beginning — not the empty tail of the previous filter.
+  const scrollTop = () => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  };
+
   const setSearchAndReset = useCallback((next: string) => {
     setSearch(next);
     setVisibleCount(DEFAULT_PAGE_BATCH);
+    scrollTop();
   }, []);
 
   const setActiveCatAndReset = useCallback((next: string) => {
     setActiveCat(next);
     setVisibleCount(DEFAULT_PAGE_BATCH);
+    scrollTop();
   }, []);
 
   const reset = useCallback(() => {
     setSearch(DEFAULTS.search);
     setActiveCat(DEFAULTS.activeCat);
     setVisibleCount(DEFAULT_PAGE_BATCH);
+    scrollTop();
   }, []);
 
   const loadMore = useCallback(() => {
