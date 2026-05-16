@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/i18n";
 import { PackageIcon, SearchIcon } from "@/components/icons";
+import PublicLegalFooter from "../_components/PublicLegalFooter";
 import SessionThemeToggle from "../_components/SessionThemeToggle";
 import ViewToggle, { VIEW_PREF_KEY } from "../_components/ViewToggle";
 import { useCatalogListState } from "../_hooks/useCatalogListState";
@@ -198,7 +199,7 @@ export default function PublicCatalogList({
           onReset={reset}
         />
       ) : (
-        <div className="px-3 pb-12">
+        <div className="px-3">
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
             {filtered.slice(0, visibleCount).map((p, idx) => (
               <li key={p.id}>
@@ -214,6 +215,8 @@ export default function PublicCatalogList({
           {hasMore && <div ref={sentinelRef} className="h-1" aria-hidden="true" />}
         </div>
       )}
+
+      <PublicLegalFooter token={token} />
     </div>
   );
 }

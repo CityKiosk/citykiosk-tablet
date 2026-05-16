@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/i18n";
 import { ChevronLeftIcon, PackageIcon } from "@/components/icons";
+import PublicLegalFooter from "../../_components/PublicLegalFooter";
 import SessionThemeToggle from "../../_components/SessionThemeToggle";
 import type {
   PublicProduct,
@@ -52,7 +53,7 @@ export default function PublicProductDetail({
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-3 pb-16">
+      <main className="max-w-2xl mx-auto px-3">
         <div className="mt-3 relative aspect-square w-full bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
           {product.image_url ? (
             <Image
@@ -116,6 +117,8 @@ export default function PublicProductDetail({
           </section>
         )}
       </main>
+
+      <PublicLegalFooter token={token} />
     </div>
   );
 }

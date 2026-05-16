@@ -1,7 +1,14 @@
 // ============================================================================
 // LegalPage — Allgemeine Geschäftsbedingungen (AGB)
 // ============================================================================
-// Renders as the final page of the public catalog flipbook (and admin Vitrine).
+// Two render modes:
+//   - variant="flipbook" (default): fixed-height, 2-column page used inside
+//     the flipbook spread + admin Vitrine. Two parts (§§ 1-6 and §§ 7-11).
+//   - variant="mobile": single column, normal scroll, larger typography for
+//     mobile readability. Renders all 11 sections in one pass and ignores
+//     `part`. Used by the dedicated /v/[token]/agb route to satisfy the
+//     "mühelos lesbar" requirement on phones (BGH).
+//
 // Locale always German — legal text is not translated.
 // ============================================================================
 
@@ -118,7 +125,19 @@ const PART_RANGES: Record<1 | 2, [number, number]> = {
   2: [6, 11],  // § 7 – § 11
 };
 
-export default function LegalPage({ part = 1 }: { part?: 1 | 2 }) {
+type LegalPageProps =
+  | { variant?: "flipbook"; part?: 1 | 2 }
+  | { variant: "mobile" };
+
+export default function LegalPage(props: LegalPageProps = {}) {
+  if (props.variant === "mobile") {
+    return <LegalPageMobile />;
+  }
+  const part = props.part ?? 1;
+  return <LegalPageFlipbook part={part} />;
+}
+
+function LegalPageFlipbook({ part }: { part: 1 | 2 }) {
   const [from, to] = PART_RANGES[part];
   const sections = SECTIONS.slice(from, to);
   const isFirst = part === 1;
@@ -168,5 +187,57 @@ export default function LegalPage({ part = 1 }: { part?: 1 | 2 }) {
         Seite {part} / {LEGAL_PAGE_COUNT}
       </div>
     </div>
+  );
+}
+
+// Single-column, large-text variant for /v/[token]/agb on phones. Font size
+// and line-height target "mühelos lesbar" per BGH — clearly above the 1mm
+// boundary critiqued in case law, and tall enough that customers can read
+// without zoom.
+function LegalPageMobile() {
+  return (
+    <article className="max-w-2xl mx-auto px-4 py-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+      <header className="text-center pb-5 mb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-700 dark:text-sky-400">
+          Sock Off Berlin Souvenirs GmbH
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-2 leading-tight">
+          Allgemeine Geschäftsbedingungen
+        </h1>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Stand: gültige Fassung zum Zeitpunkt des Vertragsschlusses
+        </p>
+      </header>
+
+      <div className="space-y-6 text-[15px] leading-relaxed">
+        {SECTIONS.map((s) => (
+          <section key={s.id} aria-labelledby={`agb-h-${s.id}`}>
+            <h2
+              id={`agb-h-${s.id}`}
+              className="text-base font-semibold mb-2 text-slate-900 dark:text-slate-50"
+            >
+              {s.title}
+            </h2>
+            {s.items.length === 1 ? (
+              <p className="hyphens-auto" style={{ hyphens: "auto" }}>
+                {s.items[0]}
+              </p>
+            ) : (
+              <ol className="list-decimal pl-5 space-y-2 marker:text-slate-400 dark:marker:text-slate-500">
+                {s.items.map((item, i) => (
+                  <li
+                    key={i}
+                    className="hyphens-auto pl-1"
+                    style={{ hyphens: "auto" }}
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        ))}
+      </div>
+    </article>
   );
 }
