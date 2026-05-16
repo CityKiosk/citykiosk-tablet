@@ -7,10 +7,10 @@
 // new SECURITY DEFINER function for a single lookup.
 // ============================================================================
 
-import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { DISPLAY_FIELD_DEFAULTS } from "@/lib/displayFields";
 import PublicProductDetail from "./PublicProductDetail";
+import { getPublicCatalog } from "../../_data/catalog";
 
 export const revalidate = 60;
 
@@ -24,22 +24,14 @@ export default async function PublicProductPage({ params }: PageProps) {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(token) || !uuidRegex.test(productId)) notFound();
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_public_catalog", {
-    share_token: token,
-  });
+  const data = await getPublicCatalog(token);
+  if (!data) notFound();
 
-  if (error || !data) notFound();
-
-  const products = data.products ?? [];
-  const categories = data.categories ?? [];
-  const displayFields = data.display_fields ?? DISPLAY_FIELD_DEFAULTS;
-
-  const product = products.find((p: { id: string }) => p.id === productId);
+  const product = data.products.find((p) => p.id === productId);
   if (!product) notFound();
 
   const category = product.category_id
-    ? categories.find((c: { id: string }) => c.id === product.category_id) ?? null
+    ? data.categories.find((c) => c.id === product.category_id) ?? null
     : null;
 
   return (
@@ -47,7 +39,7 @@ export default async function PublicProductPage({ params }: PageProps) {
       token={token}
       product={product}
       category={category}
-      displayFields={displayFields}
+      displayFields={data.display_fields ?? DISPLAY_FIELD_DEFAULTS}
     />
   );
 }

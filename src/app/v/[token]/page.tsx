@@ -11,10 +11,10 @@
 // here.
 // ============================================================================
 
-import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PublicFlipbook from "./PublicFlipbook";
 import { DISPLAY_FIELD_DEFAULTS } from "@/lib/displayFields";
+import { getPublicCatalog } from "./_data/catalog";
 
 export const revalidate = 60;
 
@@ -28,26 +28,16 @@ export default async function PublicCatalogPage({ params }: PageProps) {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(token)) notFound();
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_public_catalog", {
-    share_token: token,
-  });
-
-  if (error || !data) notFound();
-
-  const products = data.products ?? [];
-  const categories = data.categories ?? [];
-  const displayFields = data.display_fields ?? DISPLAY_FIELD_DEFAULTS;
-
-  if (products.length === 0) notFound();
+  const data = await getPublicCatalog(token);
+  if (!data || data.products.length === 0) notFound();
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
       <PublicFlipbook
         token={token}
-        products={products}
-        categories={categories}
-        displayFields={displayFields}
+        products={data.products}
+        categories={data.categories}
+        displayFields={data.display_fields ?? DISPLAY_FIELD_DEFAULTS}
       />
     </div>
   );

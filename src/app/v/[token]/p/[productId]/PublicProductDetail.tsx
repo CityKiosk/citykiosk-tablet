@@ -11,32 +11,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/i18n";
 import { ChevronLeftIcon, PackageIcon } from "@/components/icons";
-import SessionThemeToggle from "../../SessionThemeToggle";
+import SessionThemeToggle from "../../_components/SessionThemeToggle";
+import type {
+  PublicProduct,
+  PublicCategory,
+  PublicDisplayFields,
+} from "../../_data/catalog";
 
-type Category = {
-  id: string;
-  name_de: string;
-};
-
-type Product = {
-  id: string;
-  name_de: string;
-  price: number;
-  image_url: string | null;
-  category_id: string | null;
-  dimensions: string | null;
-  packaging_unit: number | null;
-  sku: string | null;
-  description_de: string | null;
-};
-
-type DisplayFields = {
-  name: boolean;
-  description: boolean;
-  sku: boolean;
-  dimensions: boolean;
-  price: boolean;
-  packagingUnit: boolean;
+type Props = {
+  token: string;
+  product: PublicProduct;
+  category: PublicCategory | null;
+  displayFields: PublicDisplayFields;
 };
 
 export default function PublicProductDetail({
@@ -44,12 +30,7 @@ export default function PublicProductDetail({
   product,
   category,
   displayFields,
-}: {
-  token: string;
-  product: Product;
-  category: Category | null;
-  displayFields: DisplayFields;
-}) {
+}: Props) {
   const showSku = displayFields.sku && !!product.sku;
   const showDimensions = displayFields.dimensions && !!product.dimensions;
   const showPackaging = displayFields.packagingUnit && !!product.packaging_unit;

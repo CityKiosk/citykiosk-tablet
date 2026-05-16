@@ -10,14 +10,18 @@
 
 import { useEffect, useMemo, useRef, useState, memo } from "react";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { FlipPage } from "@/components/Flipbook";
 import LegalPage, { LEGAL_PAGE_COUNT } from "@/components/LegalPage";
 import { formatPrice } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 import { ChevronRightIcon, MenuIcon, XIcon } from "@/components/icons";
-import SessionThemeToggle from "./SessionThemeToggle";
-import ViewToggle, { VIEW_PREF_KEY } from "./ViewToggle";
+import SessionThemeToggle from "./_components/SessionThemeToggle";
+import ViewToggle, { VIEW_PREF_KEY } from "./_components/ViewToggle";
+import type {
+  PublicProduct as Product,
+  PublicCategory as Category,
+  PublicDisplayFields as DisplayFields,
+} from "./_data/catalog";
 
 const Flipbook = dynamic(() => import("@/components/Flipbook"), {
   ssr: false,
@@ -25,35 +29,6 @@ const Flipbook = dynamic(() => import("@/components/Flipbook"), {
     <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
   ),
 });
-
-type Category = {
-  id: string;
-  slug: string;
-  name_de: string;
-  sort_order: number;
-};
-
-type Product = {
-  id: string;
-  name_de: string;
-  price: number;
-  image_url: string | null;
-  category_id: string | null;
-  dimensions: string | null;
-  packaging_unit: number | null;
-  sku: string | null;
-  description_de: string | null;
-  sort_order: number;
-};
-
-type DisplayFields = {
-  name: boolean;
-  description: boolean;
-  sku: boolean;
-  dimensions: boolean;
-  price: boolean;
-  packagingUnit: boolean;
-};
 
 const PAGE_SIZE = 4;
 

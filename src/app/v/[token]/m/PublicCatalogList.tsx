@@ -7,73 +7,59 @@
 // filters by category chip, searches by name/SKU. Cards link to the public
 // product detail route at /v/[token]/p/[productId].
 //
+// State (search / activeCat / visibleCount / scroll position) is persisted
+// to sessionStorage by useCatalogListState + useScrollRestoration so back-
+// navigation from a product detail feels like the list stayed where it was.
+//
 // Locale: hardcoded German (matches PublicFlipbook).
 // ============================================================================
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/i18n";
 import { PackageIcon, SearchIcon } from "@/components/icons";
-import SessionThemeToggle from "../SessionThemeToggle";
-import ViewToggle, { VIEW_PREF_KEY } from "../ViewToggle";
+import SessionThemeToggle from "../_components/SessionThemeToggle";
+import ViewToggle, { VIEW_PREF_KEY } from "../_components/ViewToggle";
+import { useCatalogListState } from "../_hooks/useCatalogListState";
+import { useScrollRestoration } from "../_hooks/useScrollRestoration";
+import type {
+  PublicProduct,
+  PublicCategory,
+  PublicDisplayFields,
+} from "../_data/catalog";
 
-type Category = {
-  id: string;
-  slug: string;
-  name_de: string;
-  sort_order: number;
+type Props = {
+  token: string;
+  products: PublicProduct[];
+  categories: PublicCategory[];
+  displayFields: PublicDisplayFields;
 };
-
-type Product = {
-  id: string;
-  name_de: string;
-  price: number;
-  image_url: string | null;
-  category_id: string | null;
-  dimensions: string | null;
-  packaging_unit: number | null;
-  sku: string | null;
-  description_de: string | null;
-  sort_order: number;
-};
-
-type DisplayFields = {
-  name: boolean;
-  description: boolean;
-  sku: boolean;
-  dimensions: boolean;
-  price: boolean;
-  packagingUnit: boolean;
-};
-
-const PAGE_BATCH = 24;
 
 export default function PublicCatalogList({
   token,
   products,
   categories,
   displayFields,
-}: {
-  token: string;
-  products: Product[];
-  categories: Category[];
-  displayFields: DisplayFields;
-}) {
+}: Props) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [activeCat, setActiveCat] = useState<string>("all");
-  const [visibleCount, setVisibleCount] = useState(PAGE_BATCH);
+  const {
+    search,
+    activeCat,
+    visibleCount,
+    setSearch,
+    setActiveCat,
+    reset,
+    loadMore,
+  } = useCatalogListState(token);
 
-  // Honor a persisted "flipbook" preference from a prior visit by redirecting
-  // back to the flipbook view. The default for first-time mobile visitors is
-  // already "list" (we got here via UA-based server redirect), so an empty
-  // localStorage stays on this page.
+  // Honor a persisted "flipbook" preference from a prior visit. Middleware
+  // already routed phones here; this hop only fires when the customer
+  // explicitly chose the flipbook on a previous visit from the same device.
   useEffect(() => {
     try {
-      const pref = localStorage.getItem(VIEW_PREF_KEY);
-      if (pref === "flipbook") {
+      if (localStorage.getItem(VIEW_PREF_KEY) === "flipbook") {
         router.replace(`/v/${token}?view=flipbook`);
       }
     } catch {}
@@ -108,11 +94,8 @@ export default function PublicCatalogList({
     return [...list].sort((a, b) => collator.compare(a.name_de, b.name_de));
   }, [search, activeCat, products, catById]);
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const hasMore = visibleCount < filtered.length;
-  const loadMore = useCallback(() => {
-    setVisibleCount((c) => c + PAGE_BATCH);
-  }, []);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -127,9 +110,12 @@ export default function PublicCatalogList({
     return () => observer.disconnect();
   }, [loadMore, hasMore, visibleCount]);
 
+  // Restore scroll only after the visible slice is rendered (otherwise the
+  // saved Y would be clipped because the document hasn't grown yet).
+  useScrollRestoration(token, filtered.length > 0);
+
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      {/* Sticky header — brand strip + theme + view toggle */}
       <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="h-12 flex items-center gap-2 px-3">
           <h1 className="flex-1 min-w-0 text-sm font-semibold text-slate-700 dark:text-slate-200 tracking-wide truncate">
@@ -141,7 +127,6 @@ export default function PublicCatalogList({
           </div>
         </div>
 
-        {/* Search bar */}
         <div className="px-3 pb-2">
           <div className="relative">
             <SearchIcon
@@ -158,16 +143,12 @@ export default function PublicCatalogList({
               inputMode="search"
               placeholder="Suchen — Name oder Art.-Nr."
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setVisibleCount(PAGE_BATCH);
-              }}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full h-10 pl-9 pr-3 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
             />
           </div>
         </div>
 
-        {/* Category chips — horizontal scroll */}
         <nav
           aria-label="Kategorie filtern"
           className="overflow-x-auto scrollbar-none border-t border-slate-200 dark:border-slate-800"
@@ -177,10 +158,7 @@ export default function PublicCatalogList({
               <Chip
                 label="Alle"
                 active={activeCat === "all"}
-                onClick={() => {
-                  setActiveCat("all");
-                  setVisibleCount(PAGE_BATCH);
-                }}
+                onClick={() => setActiveCat("all")}
               />
             </li>
             {categories.map((c) => (
@@ -189,10 +167,7 @@ export default function PublicCatalogList({
                   label={c.name_de}
                   count={countByCat.get(c.id) || 0}
                   active={activeCat === c.id}
-                  onClick={() => {
-                    setActiveCat(c.id);
-                    setVisibleCount(PAGE_BATCH);
-                  }}
+                  onClick={() => setActiveCat(c.id)}
                 />
               </li>
             ))}
@@ -200,36 +175,15 @@ export default function PublicCatalogList({
         </nav>
       </header>
 
-      {/* Result count */}
       <div className="px-3 pt-3 text-xs text-slate-500 dark:text-slate-400 tabular">
-        {filtered.length === 1
-          ? "1 Produkt"
-          : `${filtered.length} Produkte`}
+        {filtered.length === 1 ? "1 Produkt" : `${filtered.length} Produkte`}
       </div>
 
-      {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="px-3 py-16 flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-            <PackageIcon width={22} height={22} />
-          </div>
-          <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">
-            Keine Produkte gefunden
-          </p>
-          {(search || activeCat !== "all") && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                setActiveCat("all");
-                setVisibleCount(PAGE_BATCH);
-              }}
-              className="cursor-pointer mt-3 text-xs font-medium text-sky-700 dark:text-sky-400 hover:underline"
-            >
-              Filter zurücksetzen
-            </button>
-          )}
-        </div>
+        <EmptyState
+          showReset={search.length > 0 || activeCat !== "all"}
+          onReset={reset}
+        />
       ) : (
         <div className="px-3 pb-12">
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
@@ -250,6 +204,8 @@ export default function PublicCatalogList({
     </div>
   );
 }
+
+// ── Subcomponents (local — only used by this view) ─────────────────────────
 
 function Chip({
   label,
@@ -287,9 +243,9 @@ function ProductCard({
   displayFields,
   priority,
 }: {
-  product: Product;
+  product: PublicProduct;
   token: string;
-  displayFields: DisplayFields;
+  displayFields: PublicDisplayFields;
   priority: boolean;
 }) {
   const showSku = displayFields.sku && !!product.sku;
@@ -298,7 +254,6 @@ function ProductCard({
   return (
     <Link
       href={`/v/${token}/p/${product.id}`}
-      prefetch={false}
       className="group block rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-shadow"
     >
       <div className="relative aspect-square bg-slate-100 dark:bg-slate-800">
@@ -346,3 +301,26 @@ function ProductCard({
     </Link>
   );
 }
+
+function EmptyState({ showReset, onReset }: { showReset: boolean; onReset: () => void }) {
+  return (
+    <div className="px-3 py-16 flex flex-col items-center justify-center text-center">
+      <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+        <PackageIcon width={22} height={22} />
+      </div>
+      <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+        Keine Produkte gefunden
+      </p>
+      {showReset && (
+        <button
+          type="button"
+          onClick={onReset}
+          className="cursor-pointer mt-3 text-xs font-medium text-sky-700 dark:text-sky-400 hover:underline"
+        >
+          Filter zurücksetzen
+        </button>
+      )}
+    </div>
+  );
+}
+
