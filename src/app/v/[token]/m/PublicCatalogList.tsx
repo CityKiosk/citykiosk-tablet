@@ -265,8 +265,13 @@ function ProductCard({
   displayFields: PublicDisplayFields;
   priority: boolean;
 }) {
+  // Every conditional below collapses fully when the toggle is off OR the
+  // product has no value for that field — no placeholder rows, no min-h
+  // reservations. Card height adapts to the data shown.
   const showSku = displayFields.sku && !!product.sku;
   const showPackaging = displayFields.packagingUnit && !!product.packaging_unit;
+  const showDimensions = displayFields.dimensions && !!product.dimensions;
+  const showDescription = displayFields.description && !!product.description_de;
 
   return (
     <Link
@@ -291,7 +296,7 @@ function ProductCard({
       </div>
       <div className="px-2.5 py-2">
         {displayFields.name && (
-          <div className="text-xs font-semibold text-slate-900 dark:text-slate-50 leading-tight line-clamp-2 min-h-[2.25em]">
+          <div className="text-xs font-semibold text-slate-900 dark:text-slate-50 leading-tight line-clamp-2">
             {product.name_de}
           </div>
         )}
@@ -309,10 +314,20 @@ function ProductCard({
             </span>
           )}
         </div>
+        {showDimensions && (
+          <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 tabular line-clamp-1">
+            {product.dimensions}
+          </div>
+        )}
         {showSku && (
           <div className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500 tabular line-clamp-1">
             Art.-Nr. {product.sku}
           </div>
+        )}
+        {showDescription && (
+          <p className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-3">
+            {product.description_de}
+          </p>
         )}
       </div>
     </Link>
