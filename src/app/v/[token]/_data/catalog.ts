@@ -15,8 +15,18 @@
 // ============================================================================
 
 import { unstable_cache } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+
+// Stateless anon client — no cookies, no session. The public catalog RPC is
+// SECURITY DEFINER and granted to `anon`, so user context is irrelevant.
+// A cookies-bound client would crash inside unstable_cache because Next.js
+// forbids dynamic data sources (cookies/headers) in a cache scope.
+const publicClient = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  { auth: { persistSession: false, autoRefreshToken: false } },
+);
 
 type RpcReturn = Database["public"]["Functions"]["get_public_catalog"]["Returns"];
 
@@ -36,8 +46,7 @@ export type PublicDisplayFields = PublicCatalogPayload["display_fields"];
 export async function getPublicCatalog(token: string): Promise<PublicCatalogPayload | null> {
   const fetcher = unstable_cache(
     async (t: string): Promise<PublicCatalogPayload | null> => {
-      const supabase = await createClient();
-      const { data, error } = await supabase.rpc("get_public_catalog", {
+      const { data, error } = await publicClient.rpc("get_public_catalog", {
         share_token: t,
       });
       if (error || !data) return null;
