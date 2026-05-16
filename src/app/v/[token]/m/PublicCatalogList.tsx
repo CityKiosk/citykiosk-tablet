@@ -186,14 +186,14 @@ export default function PublicCatalogList({
         />
       ) : (
         <div className="px-3 pb-12">
-          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
             {filtered.slice(0, visibleCount).map((p, idx) => (
               <li key={p.id}>
                 <ProductCard
                   product={p}
                   token={token}
                   displayFields={displayFields}
-                  priority={idx < 4}
+                  priority={idx < 2}
                 />
               </li>
             ))}
@@ -262,7 +262,7 @@ function ProductCard({
             src={product.image_url}
             alt={product.name_de}
             fill
-            sizes="(max-width: 640px) 50vw, 33vw"
+            sizes="(max-width: 640px) 100vw, 50vw"
             className="object-cover"
             priority={priority}
           />

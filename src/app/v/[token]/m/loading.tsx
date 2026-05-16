@@ -17,8 +17,8 @@ export default function PublicMobileCatalogLoading() {
           ))}
         </div>
       </div>
-      <div className="px-3 pt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[...Array(6)].map((_, i) => (
+      <div className="px-3 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[...Array(3)].map((_, i) => (
           <div key={i} className="rounded-xl overflow-hidden">
             <div className="aspect-square bg-slate-200 dark:bg-slate-800 animate-pulse" />
             <div className="px-2.5 py-2 space-y-1.5">
