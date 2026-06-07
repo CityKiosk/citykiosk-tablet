@@ -421,6 +421,35 @@ export type Database = {
         }
         Relationships: []
       }
+      app_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          created_at: string
+          last_seen: string
+        }
+        Insert: {
+          id: string
+          user_id: string
+          created_at?: string
+          last_seen?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          created_at?: string
+          last_seen?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -441,6 +470,8 @@ export type Database = {
       is_admin_pin_unlocked: { Args: { p_scope: string }; Returns: boolean }
       extend_admin_pin_unlock: { Args: { p_scope: string }; Returns: void }
       lock_admin_pin: { Args: { p_scope?: string | null }; Returns: void }
+      register_session: { Args: { p_sid: string }; Returns: boolean }
+      touch_session: { Args: { p_sid: string }; Returns: boolean }
       update_display_field: {
         Args: { p_scope: string; p_key: string; p_value: boolean }
         Returns: void

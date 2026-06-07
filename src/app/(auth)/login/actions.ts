@@ -15,9 +15,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { z } from "zod";
 import { loginRateLimit } from "@/lib/rateLimit";
+import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE } from "@/lib/session";
 
 const SignInSchema = z.object({
   email: z.string().email({ message: "Ungültige E-Mail-Adresse / Geçersiz e-posta" }),
@@ -75,6 +76,45 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
       error: "Ungültige Anmeldedaten / Geçersiz giriş bilgileri",
     };
   }
+
+  // Concurrent-login limit: at most 2 active device sessions. register_session
+  // atomically reaps stale rows, counts, and inserts a slot — or returns false
+  // when 2 are already active.
+  const cookieStore = await cookies();
+  // Reuse this device's existing session id when present, so re-login from the
+  // same device keeps its slot (register_session treats a known sid as a no-op
+  // touch) instead of burning a 2nd slot and locking out a real 2nd device.
+  const existingSid = cookieStore.get(SESSION_COOKIE)?.value;
+  const sid =
+    existingSid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existingSid)
+      ? existingSid
+      : crypto.randomUUID();
+
+  const { data: granted, error: regError } = await supabase.rpc("register_session", { p_sid: sid });
+  // Distinguish a real DB/RPC failure (e.g. migration not yet applied) from a
+  // genuine limit-reached. Both fail closed — we revoke the session we just
+  // created — but the message must not mislead.
+  if (regError) {
+    await supabase.auth.signOut();
+    return {
+      error: "Anmeldung fehlgeschlagen, bitte erneut versuchen. / Giriş başarısız, lütfen tekrar deneyin.",
+    };
+  }
+  if (!granted) {
+    await supabase.auth.signOut();
+    return {
+      error:
+        "Maximal 2 Geräte gleichzeitig angemeldet — bitte auf einem anderen Gerät abmelden. / Aynı anda en fazla 2 cihaz açık olabilir — lütfen başka bir cihazdan çıkış yapın.",
+    };
+  }
+
+  cookieStore.set(SESSION_COOKIE, sid, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_COOKIE_MAX_AGE,
+  });
 
   redirect(safeNextPath(parsed.data.next));
 }

@@ -15,6 +15,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './database.types'
+import { SESSION_COOKIE } from '@/lib/session'
 
 // Login olmadan erişilebilecek path'ler
 const PUBLIC_PATHS = ['/login', '/reset-password/request', '/reset-password/confirm', '/auth/callback', '/api/health', '/v']
@@ -57,6 +58,32 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Concurrent-login limit: validate this device's app-session on every
+  // authenticated request to a protected path. touch_session returns false if
+  // the slot was reaped (12h idle) or evicted — or if no sid cookie exists
+  // (e.g. a session predating this feature). In all those cases sign the
+  // device out so it can't bypass the 2-device cap with a still-valid JWT.
+  // /login is public so we skip it here (the redirect below handles it).
+  if (user && !isPublicPath(pathname)) {
+    const sid = request.cookies.get(SESSION_COOKIE)?.value
+    let valid = false
+    if (sid) {
+      const { data } = await supabase.rpc('touch_session', { p_sid: sid })
+      valid = data === true
+    }
+    if (!valid) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      // Carry the cleared auth cookies (set by signOut via the adapter) onto
+      // the redirect response, then drop the stale session cookie.
+      const redirectResponse = NextResponse.redirect(url)
+      supabaseResponse.cookies.getAll().forEach((c) => redirectResponse.cookies.set(c))
+      redirectResponse.cookies.delete(SESSION_COOKIE)
+      return redirectResponse
+    }
+  }
 
   // Authenticated user visiting /login → redirect to /catalog
   if (user && pathname === '/login') {
