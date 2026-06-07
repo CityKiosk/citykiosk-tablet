@@ -86,6 +86,16 @@ type LocaleDict = {
     /** Generic "Kategorie konnte nicht gespeichert werden" fallback */
     saveError: string;
   };
+  addCustomer: {
+    title: string;
+    nameLabel: string;
+    shopLabel: string;
+    nameRequired: string;
+    shopRequired: string;
+    save: string;
+    added: string;
+    saveError: string;
+  };
   add: {
     title: string;
     name: string;
@@ -231,9 +241,11 @@ type LocaleDict = {
   settings: {
     title: string;
     subtitle: string;
-    tabs: { categories: string; products: string; data: string; display: string };
+    tabs: { categories: string; products: string; data: string; display: string; customers: string };
     categoriesHeading: string;
     customCategoriesEmpty: string;
+    customersHeading: string;
+    customersEmpty: string;
     seedCategories: string;
     productsHeading: string;
     customProductsEmpty: string;
@@ -422,6 +434,16 @@ export const dict: Record<Locale, LocaleDict> = {
       placeholder: "Kategoriename",
       saveError: "Kategorie konnte nicht gespeichert werden",
     },
+    addCustomer: {
+      title: "Neuer Kunde",
+      nameLabel: "Ansprechpartner",
+      shopLabel: "Shop-Name",
+      nameRequired: "Ansprechpartner erforderlich",
+      shopRequired: "Shop-Name erforderlich",
+      save: "Kunde speichern",
+      added: "Kunde hinzugefügt",
+      saveError: "Kunde konnte nicht erstellt werden",
+    },
     add: {
       title: "Neues Produkt",
       name: "Produktname",
@@ -572,9 +594,11 @@ export const dict: Record<Locale, LocaleDict> = {
     settings: {
       title: "Einstellungen",
       subtitle: "Kategorien, Produkte und Daten verwalten.",
-      tabs: { categories: "Kategorien", products: "Produkte", data: "Daten", display: "Anzeige" },
+      tabs: { categories: "Kategorien", products: "Produkte", data: "Daten", display: "Anzeige", customers: "Kunden" },
       categoriesHeading: "Eigene Kategorien",
       customCategoriesEmpty: "Noch keine eigenen Kategorien.",
+      customersHeading: "Kunden",
+      customersEmpty: "Noch keine Kunden. Fügen Sie Ihren ersten Kunden hinzu.",
       seedCategories: "Standard-Kategorien",
       productsHeading: "Eigene Produkte",
       customProductsEmpty: "Noch keine eigenen Produkte.",

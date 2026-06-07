@@ -234,40 +234,6 @@ export async function createOrder(input: {
   return { success: true, orderId: order.id };
 }
 
-// ── Add Customer ──
-const AddCustomerSchema = z.object({
-  first_name: z.string().min(1, "Name erforderlich").max(100),
-  last_name: z.string().max(100).optional(),
-  shop_name: z.string().min(1, "Firmenname erforderlich").max(200),
-});
-
-export async function addCustomer(input: {
-  first_name: string;
-  last_name?: string;
-  shop_name: string;
-}): Promise<{ id?: string; error?: string }> {
-  const parsed = AddCustomerSchema.safeParse(input);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Nicht angemeldet" };
-
-  const { data, error } = await supabase
-    .from("customers")
-    .insert({
-      owner_id: user.id,
-      first_name: parsed.data.first_name,
-      last_name: parsed.data.last_name || null,
-      shop_name: parsed.data.shop_name,
-    })
-    .select("id")
-    .single();
-
-  if (error) return { error: "Kunde konnte nicht erstellt werden" };
-  return { id: data.id };
-}
-
 // ── Delete Order ──
 export async function deleteOrder(orderId: string): Promise<{ error?: string }> {
   const supabase = await createClient();

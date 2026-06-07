@@ -8,6 +8,7 @@ import PageHeader from "@/components/PageHeader";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ProductForm from "@/components/ProductForm";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
+import AddCustomerDialog from "@/components/AddCustomerDialog";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import { useDisplayFields, type DisplayFields } from "@/components/DisplayFieldsProvider";
 import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "@/components/icons";
@@ -26,11 +27,13 @@ import {
   lockPin,
   hasPin as hasPinAction,
   removePin as removePinAction,
+  fetchCustomersForSettings,
+  type SettingsCustomer,
 } from "@/app/(dashboard)/settings/actions";
 import PinPad from "@/components/PinPad";
 import Modal from "@/components/Modal";
 
-type Tab = "categories" | "products" | "data" | "display";
+type Tab = "categories" | "products" | "customers" | "data" | "display";
 
 // Per-page unlock key. Each admin page has its own key — see StockClient
 // for rationale (prevents cross-page leak when the tablet is handed over).
@@ -79,9 +82,11 @@ export default function SettingsPage() {
 
   const [categories, setCategories] = useState<SettingsCategory[]>([]);
   const [products, setProducts] = useState<SettingsProduct[]>([]);
+  const [customers, setCustomers] = useState<SettingsCustomer[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const [showAddCat, setShowAddCat] = useState(false);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddProd, setShowAddProd] = useState(false);
   const [editProd, setEditProd] = useState<SettingsProduct | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onYes: () => void } | null>(null);
@@ -90,11 +95,14 @@ export default function SettingsPage() {
   const [prodCatFilter, setProdCatFilter] = useState<string>("all");
 
   function reload() {
-    Promise.all([fetchCategories(), fetchProducts()]).then(([catRes, prodRes]) => {
-      if (catRes.data) setCategories(catRes.data);
-      if (prodRes.data) setProducts(prodRes.data);
-      setLoaded(true);
-    });
+    Promise.all([fetchCategories(), fetchProducts(), fetchCustomersForSettings()]).then(
+      ([catRes, prodRes, custRes]) => {
+        if (catRes.data) setCategories(catRes.data);
+        if (prodRes.data) setProducts(prodRes.data);
+        if (custRes.data) setCustomers(custRes.data);
+        setLoaded(true);
+      }
+    );
   }
 
   useEffect(() => {
@@ -198,7 +206,7 @@ export default function SettingsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl mb-6 max-w-md">
-        {(["categories", "products", "data", "display"] as Tab[]).map((k) => (
+        {(["categories", "products", "customers", "data", "display"] as Tab[]).map((k) => (
           <button
             key={k}
             type="button"
@@ -390,6 +398,47 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* CUSTOMERS */}
+      {tab === "customers" && (
+        <div className="space-y-6">
+          <Section
+            title={`${t.settings.customersHeading} (${customers.length})`}
+            action={
+              <button
+                type="button"
+                onClick={() => setShowAddCustomer(true)}
+                className="cursor-pointer inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold text-white bg-sky-700 hover:bg-sky-800 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
+              >
+                <PlusIcon width={14} height={14} />
+                {t.customers.new}
+              </button>
+            }
+          >
+            {customers.length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                {t.settings.customersEmpty}
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+                {customers.map((c) => {
+                  const contact = [c.first_name, c.last_name].filter(Boolean).join(" ");
+                  return (
+                    <li key={c.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
+                        {c.shop_name}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-shrink-0">
+                        {contact}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Section>
+        </div>
+      )}
+
       {/* DATA */}
       {tab === "data" && (
         <div className="space-y-6">
@@ -521,6 +570,16 @@ export default function SettingsPage() {
             reload();
             toast.show(t.addCategory.added);
             setShowAddCat(false);
+          }}
+        />
+      )}
+      {showAddCustomer && (
+        <AddCustomerDialog
+          onClose={() => setShowAddCustomer(false)}
+          onSaved={() => {
+            reload();
+            toast.show(t.addCustomer.added);
+            setShowAddCustomer(false);
           }}
         />
       )}

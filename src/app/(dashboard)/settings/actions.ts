@@ -82,6 +82,75 @@ export async function updateDisplayField(
   return { success: true };
 }
 
+// ----------------------------------------------------------------------------
+// Customers — list + create from the Settings screen.
+// Gated under the "settings" scope (the owner already entered the Settings PIN
+// to reach this screen). This is intentionally a SEPARATE gate from the
+// "customers" scope used by /customers + OrderDialog — scopes never cascade
+// (see pinSession.ts threat model).
+// ----------------------------------------------------------------------------
+export type SettingsCustomer = {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  shop_name: string;
+};
+
+const AddCustomerSchema = z.object({
+  first_name: z.string().trim().min(1, "Ansprechpartner erforderlich").max(100),
+  last_name: z.string().trim().max(100).optional(),
+  shop_name: z.string().trim().min(1, "Shop-Name erforderlich").max(200),
+});
+
+export async function fetchCustomersForSettings(): Promise<{ data?: SettingsCustomer[]; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
+
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, first_name, last_name, shop_name")
+    .eq("owner_id", user.id)
+    .eq("is_active", true)
+    .order("shop_name");
+
+  if (error) return { error: "Kunden konnten nicht geladen werden" };
+  return { data: data ?? [] };
+}
+
+export async function addCustomerFromSettings(input: {
+  first_name: string;
+  last_name?: string;
+  shop_name: string;
+}): Promise<{ id?: string; error?: string }> {
+  const parsed = AddCustomerSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
+
+  const { data, error } = await supabase
+    .from("customers")
+    .insert({
+      owner_id: user.id,
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name || null,
+      shop_name: parsed.data.shop_name,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: "Kunde konnte nicht erstellt werden" };
+  return { id: data.id };
+}
+
 /** Server-side PIN status used by PinGate. Returns whether PIN exists and
  *  whether the unlock window for the given scope is currently active. */
 export async function getPinStatus(scope: PinScope) {
