@@ -77,9 +77,9 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
     };
   }
 
-  // Concurrent-login limit: at most 2 active device sessions. register_session
+  // Concurrent-login limit: at most 6 active device sessions. register_session
   // atomically reaps stale rows, counts, and inserts a slot — or returns false
-  // when 2 are already active.
+  // when 6 are already active.
   const cookieStore = await cookies();
   // Reuse this device's existing session id when present, so re-login from the
   // same device keeps its slot (register_session treats a known sid as a no-op
@@ -104,7 +104,7 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
     await supabase.auth.signOut();
     return {
       error:
-        "Maximal 2 Geräte gleichzeitig angemeldet — bitte auf einem anderen Gerät abmelden. / Aynı anda en fazla 2 cihaz açık olabilir — lütfen başka bir cihazdan çıkış yapın.",
+        "Maximal 6 Geräte gleichzeitig angemeldet — bitte auf einem anderen Gerät abmelden. / Aynı anda en fazla 6 cihaz açık olabilir — lütfen başka bir cihazdan çıkış yapın.",
     };
   }
 
