@@ -3,18 +3,28 @@
 import { useState, useTransition } from "react";
 import Modal from "./Modal";
 import { useI18n } from "./I18nProvider";
-import { addCustomerFromSettings } from "@/app/(dashboard)/settings/actions";
+import {
+  addCustomerFromSettings,
+  updateCustomerFromSettings,
+  type SettingsCustomer,
+} from "@/app/(dashboard)/settings/actions";
 
 export default function AddCustomerDialog({
+  customer,
   onClose,
   onSaved,
 }: {
+  /** Varsa edit modu: alanlar dolu gelir, kayıt update'e gider. */
+  customer?: SettingsCustomer;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useI18n();
-  const [name, setName] = useState("");
-  const [shopName, setShopName] = useState("");
+  const [name, setName] = useState(
+    customer ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") : ""
+  );
+  const [shopName, setShopName] = useState(customer?.shop_name ?? "");
+  const [notes, setNotes] = useState(customer?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -37,13 +47,23 @@ export default function AddCustomerDialog({
     const parts = trimmedName.split(/\s+/);
     const firstName = parts[0];
     const lastName = parts.length > 1 ? parts.slice(1).join(" ") : undefined;
+    const trimmedNotes = notes.trim() || undefined;
 
     startTransition(async () => {
-      const result = await addCustomerFromSettings({
-        first_name: firstName,
-        last_name: lastName,
-        shop_name: trimmedShop,
-      });
+      const result = customer
+        ? await updateCustomerFromSettings({
+            id: customer.id,
+            first_name: firstName,
+            last_name: lastName,
+            shop_name: trimmedShop,
+            notes: trimmedNotes,
+          })
+        : await addCustomerFromSettings({
+            first_name: firstName,
+            last_name: lastName,
+            shop_name: trimmedShop,
+            notes: trimmedNotes,
+          });
       if (result.error) {
         setError(result.error);
         return;
@@ -53,7 +73,7 @@ export default function AddCustomerDialog({
   }
 
   return (
-    <Modal title={t.addCustomer.title} onClose={onClose}>
+    <Modal title={customer ? t.addCustomer.editTitle : t.addCustomer.title} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -97,6 +117,19 @@ export default function AddCustomerDialog({
             required
             maxLength={200}
             className={inputCls}
+          />
+        </div>
+        <div>
+          <label htmlFor="acu-notes" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            {t.addCustomer.notesLabel}
+          </label>
+          <textarea
+            id="acu-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={2000}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 dark:bg-slate-800 rounded-lg text-sm resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
           />
         </div>
       </form>

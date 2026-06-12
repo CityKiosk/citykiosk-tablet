@@ -87,6 +87,7 @@ export default function SettingsPage() {
 
   const [showAddCat, setShowAddCat] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [editCustomer, setEditCustomer] = useState<SettingsCustomer | null>(null);
   const [showAddProd, setShowAddProd] = useState(false);
   const [editProd, setEditProd] = useState<SettingsProduct | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onYes: () => void } | null>(null);
@@ -424,12 +425,29 @@ export default function SettingsPage() {
                   const contact = [c.first_name, c.last_name].filter(Boolean).join(" ");
                   return (
                     <li key={c.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
-                        {c.shop_name}
-                      </span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-shrink-0">
-                        {contact}
-                      </span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
+                          {c.shop_name}
+                        </div>
+                        {c.notes && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {c.notes}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          {contact}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setEditCustomer(c)}
+                          aria-label={t.addCustomer.editAria(c.shop_name)}
+                          className="cursor-pointer p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
+                        >
+                          <PencilIcon width={15} height={15} />
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -580,6 +598,17 @@ export default function SettingsPage() {
             reload();
             toast.show(t.addCustomer.added);
             setShowAddCustomer(false);
+          }}
+        />
+      )}
+      {editCustomer && (
+        <AddCustomerDialog
+          customer={editCustomer}
+          onClose={() => setEditCustomer(null)}
+          onSaved={() => {
+            reload();
+            toast.show(t.addCustomer.updated);
+            setEditCustomer(null);
           }}
         />
       )}

@@ -94,12 +94,14 @@ export type SettingsCustomer = {
   first_name: string;
   last_name: string | null;
   shop_name: string;
+  notes: string | null;
 };
 
 const AddCustomerSchema = z.object({
   first_name: z.string().trim().min(1, "Ansprechpartner erforderlich").max(100),
   last_name: z.string().trim().max(100).optional(),
   shop_name: z.string().trim().min(1, "Shop-Name erforderlich").max(200),
+  notes: z.string().trim().max(2000).optional(),
 });
 
 export async function fetchCustomersForSettings(): Promise<{ data?: SettingsCustomer[]; error?: string }> {
@@ -112,7 +114,7 @@ export async function fetchCustomersForSettings(): Promise<{ data?: SettingsCust
 
   const { data, error } = await supabase
     .from("customers")
-    .select("id, first_name, last_name, shop_name")
+    .select("id, first_name, last_name, shop_name, notes")
     .eq("owner_id", user.id)
     .eq("is_active", true)
     .order("shop_name");
@@ -125,6 +127,7 @@ export async function addCustomerFromSettings(input: {
   first_name: string;
   last_name?: string;
   shop_name: string;
+  notes?: string;
 }): Promise<{ id?: string; error?: string }> {
   const parsed = AddCustomerSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
@@ -143,12 +146,50 @@ export async function addCustomerFromSettings(input: {
       first_name: parsed.data.first_name,
       last_name: parsed.data.last_name || null,
       shop_name: parsed.data.shop_name,
+      notes: parsed.data.notes || null,
     })
     .select("id")
     .single();
 
   if (error) return { error: "Kunde konnte nicht erstellt werden" };
   return { id: data.id };
+}
+
+const UpdateCustomerSchema = AddCustomerSchema.extend({
+  id: z.string().uuid(),
+});
+
+export async function updateCustomerFromSettings(input: {
+  id: string;
+  first_name: string;
+  last_name?: string;
+  shop_name: string;
+  notes?: string;
+}): Promise<{ success?: boolean; error?: string }> {
+  const parsed = UpdateCustomerSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
+
+  // RLS'e ek defense: owner_id eşitliği explicit
+  const { error } = await supabase
+    .from("customers")
+    .update({
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name || null,
+      shop_name: parsed.data.shop_name,
+      notes: parsed.data.notes || null,
+    })
+    .eq("id", parsed.data.id)
+    .eq("owner_id", user.id);
+
+  if (error) return { error: "Kunde konnte nicht gespeichert werden" };
+  return { success: true };
 }
 
 /** Server-side PIN status used by PinGate. Returns whether PIN exists and

@@ -88,13 +88,17 @@ type LocaleDict = {
   };
   addCustomer: {
     title: string;
+    editTitle: string;
     nameLabel: string;
     shopLabel: string;
+    notesLabel: string;
     nameRequired: string;
     shopRequired: string;
     save: string;
     added: string;
+    updated: string;
     saveError: string;
+    editAria: (shop: string) => string;
   };
   add: {
     title: string;
@@ -436,13 +440,17 @@ export const dict: Record<Locale, LocaleDict> = {
     },
     addCustomer: {
       title: "Neuer Kunde",
+      editTitle: "Kunde bearbeiten",
       nameLabel: "Ansprechpartner",
       shopLabel: "Shop-Name",
+      notesLabel: "Notizen",
       nameRequired: "Ansprechpartner erforderlich",
       shopRequired: "Shop-Name erforderlich",
       save: "Kunde speichern",
       added: "Kunde hinzugefügt",
+      updated: "Kunde gespeichert",
       saveError: "Kunde konnte nicht erstellt werden",
+      editAria: (shop: string) => `${shop} bearbeiten`,
     },
     add: {
       title: "Neues Produkt",
