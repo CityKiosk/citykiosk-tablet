@@ -99,16 +99,20 @@ export default function SettingsPage() {
 
   function reload() {
     setLoadFailed(false);
-    Promise.all([fetchCategories(), fetchProducts(), fetchCustomersForSettings()]).then(
-      ([catRes, prodRes, custRes]) => {
+    Promise.all([fetchCategories(), fetchProducts(), fetchCustomersForSettings()])
+      .then(([catRes, prodRes, custRes]) => {
         if (catRes.data) setCategories(catRes.data);
         if (prodRes.data) setProducts(prodRes.data);
         if (custRes.data) setCustomers(custRes.data);
         // Hata ile boş listeyi ayır — yükleme hatası boş ekran gibi görünmesin
         if (!catRes.data && !prodRes.data && !custRes.data) setLoadFailed(true);
         setLoaded(true);
-      }
-    );
+      })
+      .catch(() => {
+        // Ağ hatası — sonsuz skeleton yerine retry ekranı
+        setLoadFailed(true);
+        setLoaded(true);
+      });
   }
 
   useEffect(() => {

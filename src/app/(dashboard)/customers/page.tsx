@@ -20,11 +20,17 @@ export default function CustomersPage() {
   function load() {
     setLoaded(false);
     setLoadFailed(false);
-    fetchCustomerStats().then((res) => {
-      if (res.data) setCustomers(res.data);
-      else setLoadFailed(true);
-      setLoaded(true);
-    });
+    fetchCustomerStats()
+      .then((res) => {
+        if (res.data) setCustomers(res.data);
+        else setLoadFailed(true);
+        setLoaded(true);
+      })
+      .catch(() => {
+        // Ağ hatası — sonsuz skeleton yerine retry ekranı
+        setLoadFailed(true);
+        setLoaded(true);
+      });
   }
 
   useEffect(() => {

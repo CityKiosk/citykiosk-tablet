@@ -57,13 +57,19 @@ export default function OrdersPage() {
   function load() {
     setLoaded(false);
     setLoadFailed(false);
-    fetchOrders().then((res) => {
-      // Hata ile boş listeyi ayır — yükleme hatası "sipariş yok" gibi
-      // görünmemeli (cold start'ta yanıltıcı).
-      if (res.data) setOrders(res.data);
-      else setLoadFailed(true);
-      setLoaded(true);
-    });
+    fetchOrders()
+      .then((res) => {
+        // Hata ile boş listeyi ayır — yükleme hatası "sipariş yok" gibi
+        // görünmemeli (cold start'ta yanıltıcı).
+        if (res.data) setOrders(res.data);
+        else setLoadFailed(true);
+        setLoaded(true);
+      })
+      .catch(() => {
+        // Ağ hatası (action'a hiç ulaşılamadı) — sonsuz skeleton yerine retry
+        setLoadFailed(true);
+        setLoaded(true);
+      });
   }
 
   useEffect(() => {

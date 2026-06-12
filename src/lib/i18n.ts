@@ -367,7 +367,9 @@ type LocaleDict = {
     retry: string;
     back: string;
     // Stock-only PIN ("Lager-PIN"). Optional override that gates /stock
-    // independently of /settings; the admin PIN still works for /stock too.
+    // independently of /settings. The admin PIN unlocks /stock ONLY as long
+    // as no Lager-PIN is set — once set, only the Lager-PIN opens /stock
+    // (see PinGate fallbackHint logic).
     stockSectionLabel: string;
     stockOptional: string;
     stockHint: string;
