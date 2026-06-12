@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ProductForm from "@/components/ProductForm";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import AddCustomerDialog from "@/components/AddCustomerDialog";
+import LoadError from "@/components/LoadError";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import { useDisplayFields, type DisplayFields } from "@/components/DisplayFieldsProvider";
 import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from "@/components/icons";
@@ -84,6 +85,7 @@ export default function SettingsPage() {
   const [products, setProducts] = useState<SettingsProduct[]>([]);
   const [customers, setCustomers] = useState<SettingsCustomer[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [showAddCat, setShowAddCat] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -96,11 +98,14 @@ export default function SettingsPage() {
   const [prodCatFilter, setProdCatFilter] = useState<string>("all");
 
   function reload() {
+    setLoadFailed(false);
     Promise.all([fetchCategories(), fetchProducts(), fetchCustomersForSettings()]).then(
       ([catRes, prodRes, custRes]) => {
         if (catRes.data) setCategories(catRes.data);
         if (prodRes.data) setProducts(prodRes.data);
         if (custRes.data) setCustomers(custRes.data);
+        // Hata ile boş listeyi ayır — yükleme hatası boş ekran gibi görünmesin
+        if (!catRes.data && !prodRes.data && !custRes.data) setLoadFailed(true);
         setLoaded(true);
       }
     );
@@ -193,6 +198,15 @@ export default function SettingsPage() {
     );
   }
 
+  if (loadFailed) {
+    return (
+      <div>
+        <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
+        <LoadError onRetry={() => { setLoaded(false); reload(); }} />
+      </div>
+    );
+  }
+
   return (
     <div>
       <IdleLock
@@ -258,9 +272,9 @@ export default function SettingsPage() {
                       disabled={isPending}
                       onClick={() => handleDeleteCategory(c)}
                       aria-label={t.catalog.deleteAriaCat(getName(c))}
-                      className="cursor-pointer w-9 h-9 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors disabled:opacity-60"
+                      className="cursor-pointer w-11 h-11 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 transition-colors disabled:opacity-60"
                     >
-                      <Trash2Icon width={15} height={15} />
+                      <Trash2Icon width={16} height={16} />
                     </button>
                   </li>
                 ))}
@@ -443,9 +457,9 @@ export default function SettingsPage() {
                           type="button"
                           onClick={() => setEditCustomer(c)}
                           aria-label={t.addCustomer.editAria(c.shop_name)}
-                          className="cursor-pointer p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
+                          className="cursor-pointer w-11 h-11 inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
                         >
-                          <PencilIcon width={15} height={15} />
+                          <PencilIcon width={16} height={16} />
                         </button>
                       </div>
                     </li>

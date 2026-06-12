@@ -15,6 +15,7 @@ import {
   XIcon,
 } from "./icons";
 import { signOut } from "@/app/(auth)/logout/actions";
+import { usePendingOrdersCount } from "@/lib/usePendingOrdersCount";
 import { ComponentType, SVGProps } from "react";
 
 type Item = {
@@ -23,6 +24,8 @@ type Item = {
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
   badge?: number;
   badgeLabel?: string;
+  /** amber = bekleyen iş (offline kuyruk), rose (default) = uyarı (düşük stok) */
+  badgeTone?: "rose" | "amber";
 };
 
 export default function Sidebar({
@@ -38,13 +41,21 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const pendingOrders = usePendingOrdersCount();
 
   // Panel ve Müşteriler şimdilik gizli — rotalar kodda duruyor, geri eklemek için
   // sadece bu listeye satır eklemek yeterli.
   const items: Item[] = [
     { href: "/catalog", label: t.nav.catalog, Icon: PackageIcon },
     { href: "/browse", label: t.nav.browse, Icon: GalleryHorizontalIcon },
-    { href: "/orders", label: t.nav.orders, Icon: ReceiptIcon },
+    {
+      href: "/orders",
+      label: t.nav.orders,
+      Icon: ReceiptIcon,
+      badge: pendingOrders,
+      badgeLabel: pendingOrders > 0 ? t.nav.pendingBadge(pendingOrders) : undefined,
+      badgeTone: "amber",
+    },
     {
       href: "/stock",
       label: t.nav.stock,
@@ -94,9 +105,10 @@ export default function Sidebar({
       </div>
 
       <nav aria-label={t.nav.main} className={`flex-1 overflow-y-auto py-4 space-y-1 ${collapsed ? "px-2" : "px-3"}`}>
-        {items.map(({ href, label, Icon, badge, badgeLabel }) => {
+        {items.map(({ href, label, Icon, badge, badgeLabel, badgeTone }) => {
           const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
           const hasBadge = typeof badge === "number" && badge > 0;
+          const badgeBg = badgeTone === "amber" ? "bg-amber-500" : "bg-rose-500";
           return (
             <Link
               key={href}
@@ -121,7 +133,7 @@ export default function Sidebar({
                 {hasBadge && collapsed && (
                   <span
                     aria-label={badgeLabel}
-                    className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-950"
+                    className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${badgeBg} ring-2 ring-white dark:ring-slate-950`}
                   />
                 )}
               </span>
@@ -129,7 +141,7 @@ export default function Sidebar({
               {!collapsed && hasBadge && (
                 <span
                   aria-label={badgeLabel}
-                  className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-semibold tabular"
+                  className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full ${badgeBg} text-white text-[10px] font-semibold tabular`}
                 >
                   {badge}
                 </span>
@@ -158,9 +170,8 @@ export default function Sidebar({
 }
 
 function LogoutButton({ collapsed }: { collapsed: boolean }) {
-  const { locale } = useI18n();
   const [isPending, startTransition] = useTransition();
-  const label = locale === "de" ? "Abmelden" : "Çıkış";
+  const label = "Abmelden";
 
   return (
     <button

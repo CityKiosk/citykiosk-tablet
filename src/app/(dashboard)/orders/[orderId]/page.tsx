@@ -62,6 +62,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
     setExporting(true);
     try {
       await downloadOrderPdf(toExportOrder(order), locale);
+    } catch {
+      toast.show(t.order.pdfError, "error");
     } finally {
       setExporting(false);
     }
@@ -91,6 +93,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
         // Download PDF first, then open mailto
         await downloadOrderPdf(toExportOrder(order), locale);
         window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_self");
+      }
+    } catch (err) {
+      // Kullanıcının share sheet'i kapatması hata değil — sessiz geç.
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
+        toast.show(t.order.pdfError, "error");
       }
     } finally {
       setSharing(false);

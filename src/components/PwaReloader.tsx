@@ -16,11 +16,25 @@ export default function PwaReloader() {
       if (document.hidden) {
         hiddenAt.current = Date.now();
       } else {
-        // If hidden for more than 2 minutes, reload to get fresh content
-        if (hiddenAt.current && Date.now() - hiddenAt.current > 2 * 60 * 1000) {
-          window.location.reload();
-        }
+        // If hidden for more than 2 minutes, reload to get fresh content.
+        // SwRegister da görünürlükte update tetikliyor — bekleyen bir SW
+        // update varsa reload'u ona bırak, yoksa çifte reload (iki flaş) olur.
+        const staleEnough =
+          hiddenAt.current && Date.now() - hiddenAt.current > 2 * 60 * 1000;
         hiddenAt.current = null;
+        if (staleEnough) {
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+              .getRegistration()
+              .then((reg) => {
+                if (reg?.installing || reg?.waiting) return; // SW update reload'u devralacak
+                window.location.reload();
+              })
+              .catch(() => window.location.reload());
+          } else {
+            window.location.reload();
+          }
+        }
       }
     }
 

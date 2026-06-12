@@ -6,6 +6,7 @@ import { formatDateTime, formatPrice } from "@/lib/i18n";
 import { useToast } from "@/components/Toast";
 import { useI18n } from "@/components/I18nProvider";
 import EmptyState from "@/components/EmptyState";
+import LoadError from "@/components/LoadError";
 import PageHeader from "@/components/PageHeader";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
@@ -47,16 +48,26 @@ export default function OrdersPage() {
   const { t, locale } = useI18n();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [confirmDel, setConfirmDel] = useState<OrderRow | null>(null);
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
 
-  useEffect(() => {
+  function load() {
+    setLoaded(false);
+    setLoadFailed(false);
     fetchOrders().then((res) => {
+      // Hata ile boş listeyi ayır — yükleme hatası "sipariş yok" gibi
+      // görünmemeli (cold start'ta yanıltıcı).
       if (res.data) setOrders(res.data);
+      else setLoadFailed(true);
       setLoaded(true);
     });
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   // Defer the freetext search so typing doesn't block the table re-render on
@@ -186,6 +197,15 @@ export default function OrdersPage() {
             />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div>
+        <PageHeader title={t.orders.listTitle} />
+        <LoadError onRetry={load} />
       </div>
     );
   }

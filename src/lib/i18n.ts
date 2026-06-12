@@ -10,6 +10,8 @@ type LocaleDict = {
     settings: string;
     stock: string;
     stockBadge: (n: number) => string;
+    /** "${n} Bestellung(en) warten auf Übertragung" — offline queue badge */
+    pendingBadge: (n: number) => string;
     home: string;
     main: string;
     skip: string;
@@ -129,6 +131,17 @@ type LocaleDict = {
     reqErr: string;
     pickErr: string;
     saved: string;
+    /** Toast shown when the order is queued for offline retry */
+    offlineQueued: string;
+    /** PDF generation / share failed */
+    pdfError: string;
+  };
+  /** Online/offline status toasts (OnlineStatus component) */
+  connection: {
+    offline: string;
+    backOnline: string;
+    sent: (n: number) => string;
+    failed: (n: number) => string;
   };
   orders: {
     title: (n: number) => string;
@@ -204,7 +217,24 @@ type LocaleDict = {
     itemPosition: (cur: number, total: number) => string;
     discardChanges: string;
   };
-  common: { close: string; cancel: string; confirm: string; save: string; delete: string; loading: string };
+  common: {
+    close: string;
+    cancel: string;
+    confirm: string;
+    save: string;
+    delete: string;
+    loading: string;
+    /** "Daten konnten nicht geladen werden" — generic fetch failure */
+    loadError: string;
+    retry: string;
+    /** Persistent offline banner text */
+    offlineBanner: string;
+    /** Route error boundary heading + body */
+    errorTitle: string;
+    errorBody: string;
+    themeToLight: string;
+    themeToDark: string;
+  };
   discount: {
     title: string;
     label: string;
@@ -365,6 +395,7 @@ export const dict: Record<Locale, LocaleDict> = {
       settings: "Einstellungen",
       stock: "Lager",
       stockBadge: (n: number) => `${n} Produkt(e) mit niedrigem Bestand`,
+      pendingBadge: (n: number) => `${n} Bestellung(en) warten auf Übertragung`,
       home: "Startseite",
       main: "Hauptnavigation",
       skip: "Zum Inhalt springen",
@@ -481,6 +512,14 @@ export const dict: Record<Locale, LocaleDict> = {
       reqErr: "Ansprechpartner und Shop-Name erforderlich",
       pickErr: "Bitte einen Kunden auswählen",
       saved: "Bestellung gespeichert",
+      offlineQueued: "Offline — Bestellung wird gesendet, sobald Sie wieder online sind",
+      pdfError: "PDF konnte nicht erstellt werden",
+    },
+    connection: {
+      offline: "Keine Internetverbindung",
+      backOnline: "Wieder online",
+      sent: (n: number) => `${n} ausstehende Bestellung(en) gesendet`,
+      failed: (n: number) => `${n} Bestellung(en) konnten nicht gesendet werden`,
     },
     orders: {
       title: (n: number) => `Bestellungen (${n})`,
@@ -561,7 +600,21 @@ export const dict: Record<Locale, LocaleDict> = {
       itemPosition: (cur, total) => `${cur} / ${total}`,
       discardChanges: "Änderungen nicht gespeichert. Trotzdem wechseln?",
     },
-    common: { close: "Schließen", cancel: "Abbrechen", confirm: "Bestätigen", save: "Speichern", delete: "Löschen", loading: "Lädt…" },
+    common: {
+      close: "Schließen",
+      cancel: "Abbrechen",
+      confirm: "Bestätigen",
+      save: "Speichern",
+      delete: "Löschen",
+      loading: "Lädt…",
+      loadError: "Daten konnten nicht geladen werden",
+      retry: "Erneut versuchen",
+      offlineBanner: "Offline — Bestellungen werden gespeichert und später gesendet",
+      errorTitle: "Etwas ist schiefgelaufen",
+      errorBody: "Die Seite konnte nicht angezeigt werden. Bitte versuchen Sie es erneut.",
+      themeToLight: "Helles Design",
+      themeToDark: "Dunkles Design",
+    },
     discount: {
       title: "Rabatt",
       label: "Rabatt in Prozent",

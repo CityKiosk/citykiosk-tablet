@@ -20,7 +20,7 @@ const ConfirmSchema = z
     confirm: z.string(),
   })
   .refine((data) => data.password === data.confirm, {
-    message: "Passwörter stimmen nicht überein / Şifreler eşleşmiyor",
+    message: "Passwörter stimmen nicht überein",
     path: ["confirm"],
   });
 
@@ -58,7 +58,7 @@ export async function confirmPasswordReset(
   });
 
   if (error) {
-    return { error: "Passwort konnte nicht aktualisiert werden. / Şifre güncellenemedi." };
+    return { error: "Passwort konnte nicht aktualisiert werden." };
   }
 
   // Sign out → force re-login with new password

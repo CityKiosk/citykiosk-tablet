@@ -33,6 +33,9 @@ export default function ConfirmDialog({
         <button
           type="button"
           onClick={onCancel}
+          // Güvenli varsayılan: odak iptal'de başlar — yanlışlıkla Enter'a
+          // basmak yıkıcı işlemi onaylamamalı.
+          autoFocus
           className="cursor-pointer h-10 px-4 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
         >
           {cancelLabel || t.confirm.cancel}
@@ -40,7 +43,6 @@ export default function ConfirmDialog({
         <button
           type="button"
           onClick={onConfirm}
-          autoFocus
           className={`cursor-pointer h-10 px-4 rounded-lg text-sm font-semibold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 transition-colors ${
             destructive
               ? "bg-red-600 hover:bg-red-700 focus-visible:ring-red-500/60"

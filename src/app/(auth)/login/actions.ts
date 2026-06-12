@@ -22,7 +22,7 @@ import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE } from "@/lib/session";
 
 const SignInSchema = z.object({
   email: z.string().email({ message: "Ungültige E-Mail-Adresse / Geçersiz e-posta" }),
-  password: z.string().min(1, { message: "Passwort erforderlich / Şifre gerekli" }),
+  password: z.string().min(1, { message: "Passwort erforderlich" }),
   next: z.string().optional(),
 });
 
@@ -97,7 +97,7 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
   if (regError) {
     await supabase.auth.signOut();
     return {
-      error: "Anmeldung fehlgeschlagen, bitte erneut versuchen. / Giriş başarısız, lütfen tekrar deneyin.",
+      error: "Anmeldung fehlgeschlagen, bitte erneut versuchen.",
     };
   }
   if (!granted) {

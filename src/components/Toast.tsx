@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useState } from "react";
 import { CheckIcon, XIcon } from "./icons";
 
 type ToastKind = "success" | "error";
@@ -17,24 +17,29 @@ const ToastCtx = createContext<ToastApi | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const show = useCallback((message: string, kind: ToastKind = "success") => {
-    const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, kind, message }]);
+  // Her toast kendi timeout'una sahip — tek paylaşılan timer art arda gelen
+  // toast'larda (örn. online + "gönderildi" + "gönderilemedi") en kritik
+  // mesajı erken düşürüyordu.
+  const push = useCallback((toast: Toast) => {
+    setToasts((prev) => [...prev, toast]);
+    setTimeout(() => {
+      setToasts((p) => p.filter((t) => t.id !== toast.id));
+    }, 6000);
   }, []);
+
+  const show = useCallback(
+    (message: string, kind: ToastKind = "success") => {
+      push({ id: crypto.randomUUID(), kind, message });
+    },
+    [push]
+  );
 
   const showWithAction = useCallback(
     (message: string, action: ToastAction, kind: ToastKind = "success") => {
-      const id = crypto.randomUUID();
-      setToasts((prev) => [...prev, { id, kind, message, action }]);
+      push({ id: crypto.randomUUID(), kind, message, action });
     },
-    []
+    [push]
   );
-
-  useEffect(() => {
-    if (toasts.length === 0) return;
-    const t = setTimeout(() => setToasts((p) => p.slice(1)), 6000);
-    return () => clearTimeout(t);
-  }, [toasts]);
 
   function dismiss(id: string) {
     setToasts((p) => p.filter((t) => t.id !== id));
@@ -44,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastCtx.Provider value={{ show, showWithAction }}>
       {children}
       <div
-        className="fixed top-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none max-w-[calc(100%-2rem)]"
+        className="fixed top-[max(1rem,env(safe-area-inset-top))] right-4 z-[60] flex flex-col gap-2 pointer-events-none max-w-[calc(100%-2rem)]"
         aria-live="polite"
         aria-atomic="true"
       >
@@ -53,7 +58,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              role="status"
+              // Hata toast'ları assertive olmalı — "sipariş gönderilemedi"
+              // ekran okuyucuda kuyrukta beklememeli.
+              role={isSuccess ? "status" : "alert"}
               className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border animate-in slide-in-from-top-2 fade-in duration-200 ${
                 isSuccess
                   ? "bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-900 text-slate-900 dark:text-slate-100"

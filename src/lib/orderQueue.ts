@@ -5,6 +5,15 @@
 
 const QUEUE_KEY = "souvenir_pending_orders";
 
+/** Fired on window whenever the pending queue is mutated (add/remove).
+ *  Sidebar listens to this to keep the "waiting orders" badge live. */
+export const QUEUE_CHANGED_EVENT = "souvenir_pending_orders_changed";
+
+function notifyQueueChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(QUEUE_CHANGED_EVENT));
+}
+
 export type PendingOrder = {
   id: string;
   payload: {
@@ -79,12 +88,14 @@ export function addPendingOrder(
   const list = getPendingOrders();
   list.push(pending);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(list));
+  notifyQueueChanged();
   return pending.id;
 }
 
 export function removePendingOrder(id: string) {
   const list = getPendingOrders().filter((o) => o.id !== id);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(list));
+  notifyQueueChanged();
 }
 
 export function incrementRetry(id: string) {

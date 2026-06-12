@@ -6,7 +6,8 @@ import { MinusIcon, PlusIcon } from "./icons";
 type Size = "sm" | "md" | "lg";
 
 const sizeMap: Record<Size, { btn: string; input: string; gap: string; icon: number }> = {
-  sm: { btn: "w-8 h-8", input: "w-10 h-8 text-sm", gap: "gap-0.5", icon: 13 },
+  // 40px butonlar + p-0.5 konteyner ≈ 44px efektif dokunma alanı (tablet minimumu)
+  sm: { btn: "w-10 h-10", input: "w-10 h-10 text-sm", gap: "gap-0.5", icon: 15 },
   md: { btn: "w-10 h-10", input: "w-14 h-10 text-sm", gap: "gap-1.5", icon: 16 },
   lg: { btn: "w-11 h-11", input: "w-16 h-11 text-base", gap: "gap-2", icon: 18 },
 };

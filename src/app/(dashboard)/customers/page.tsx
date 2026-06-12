@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatDate, formatPrice } from "@/lib/i18n";
 import { useI18n } from "@/components/I18nProvider";
 import EmptyState from "@/components/EmptyState";
+import LoadError from "@/components/LoadError";
 import PageHeader from "@/components/PageHeader";
 import { UsersIcon, SearchIcon } from "@/components/icons";
 import { fetchCustomerStats, type CustomerStatRow } from "@/app/(dashboard)/orders/actions";
@@ -13,13 +14,21 @@ export default function CustomersPage() {
   const { t, locale } = useI18n();
   const [customers, setCustomers] = useState<CustomerStatRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
+  function load() {
+    setLoaded(false);
+    setLoadFailed(false);
     fetchCustomerStats().then((res) => {
       if (res.data) setCustomers(res.data);
+      else setLoadFailed(true);
       setLoaded(true);
     });
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   const filtered = useMemo(() => {
@@ -39,6 +48,15 @@ export default function CustomersPage() {
 
   if (!loaded) {
     return <div className="h-96 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse" />;
+  }
+
+  if (loadFailed) {
+    return (
+      <div>
+        <PageHeader title={t.customers.title} subtitle={t.customers.subtitle} />
+        <LoadError onRetry={load} />
+      </div>
+    );
   }
 
   if (customers.length === 0) {

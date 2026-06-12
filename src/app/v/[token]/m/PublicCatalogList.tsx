@@ -129,7 +129,8 @@ export default function PublicCatalogList({
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      {/* pt-safe: çentikli telefonlarda başlık status bar altına girmesin */}
+      <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur border-b border-slate-200 dark:border-slate-800 pt-[env(safe-area-inset-top)]">
         <div className="h-12 flex items-center gap-2 px-3">
           <h1 className="flex-1 min-w-0 text-sm font-semibold text-slate-700 dark:text-slate-200 tracking-wide truncate">
             Souvenirs Berlin — Produktkatalog
@@ -200,7 +201,8 @@ export default function PublicCatalogList({
         />
       ) : (
         <div className="px-3">
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+          {/* 375px'te 2 kolon: kartlar kompakt, tek kolonda 50 ürün = çok uzun scroll */}
+          <ul className="grid grid-cols-2 gap-3 mt-2">
             {filtered.slice(0, visibleCount).map((p, idx) => (
               <li key={p.id}>
                 <ProductCard
@@ -284,7 +286,7 @@ function ProductCard({
             src={product.image_url}
             alt={product.name_de}
             fill
-            sizes="(max-width: 640px) 100vw, 50vw"
+            sizes="50vw"
             className="object-cover"
             priority={priority}
           />

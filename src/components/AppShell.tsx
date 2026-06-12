@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
+import OfflineBanner from "./OfflineBanner";
 import { MenuIcon, XIcon } from "./icons";
 import Link from "next/link";
 import { useI18n } from "./I18nProvider";
@@ -65,7 +66,10 @@ export default function AppShell({
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <div className="relative h-full animate-in slide-in-from-left duration-200">
+          <div
+            className="relative h-full animate-in slide-in-from-left duration-200 bg-white dark:bg-slate-950"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
             <Sidebar onNavigate={() => setMobileOpen(false)} lowStockCount={lowStockCount} />
             <button
               type="button"
@@ -86,7 +90,9 @@ export default function AppShell({
             <button
               type="button"
               onClick={() => {
-                if (window.innerWidth >= 1024) toggleCollapsed();
+                // matchMedia, CSS lg: breakpoint'iyle aynı semantiği kullanır
+                // (innerWidth scrollbar/zoom durumlarında sapabiliyor).
+                if (window.matchMedia("(min-width: 1024px)").matches) toggleCollapsed();
                 else setMobileOpen(true);
               }}
               aria-label={t.nav.main}
@@ -107,6 +113,8 @@ export default function AppShell({
             <div className="w-10 lg:hidden" />
           </div>
         </header>
+
+        <OfflineBanner />
 
         <main id="main-content" className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-950">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-4 pb-32">

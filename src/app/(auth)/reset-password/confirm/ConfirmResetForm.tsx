@@ -15,7 +15,7 @@ export function ConfirmResetForm() {
           htmlFor="password"
           className="block text-sm font-medium text-slate-700 dark:text-slate-300"
         >
-          Neues Passwort · Yeni şifre
+          Neues Passwort
         </label>
         <input
           id="password"
@@ -39,7 +39,7 @@ export function ConfirmResetForm() {
           htmlFor="confirm"
           className="block text-sm font-medium text-slate-700 dark:text-slate-300"
         >
-          Passwort bestätigen · Şifreyi tekrarla
+          Passwort bestätigen
         </label>
         <input
           id="confirm"
@@ -71,7 +71,7 @@ export function ConfirmResetForm() {
         disabled={isPending}
         className="w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:focus:ring-offset-slate-900"
       >
-        {isPending ? "Wird gespeichert..." : "Passwort aktualisieren · Şifreyi güncelle"}
+        {isPending ? "Wird gespeichert..." : "Passwort aktualisieren"}
       </button>
     </form>
   );

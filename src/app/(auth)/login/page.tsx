@@ -28,7 +28,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
       <img src="/logo-192.png" alt="Souvenirs Berlin" width={64} height={64} className="mx-auto" />
       <div>
         <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-          Anmelden · Giriş Yap
+          Anmelden
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Mit E-Mail und Passwort anmelden.
@@ -42,7 +42,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
           href="/reset-password/request"
           className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
         >
-          Passwort vergessen? · Şifremi unuttum
+          Passwort vergessen?
         </Link>
       </div>
     </div>

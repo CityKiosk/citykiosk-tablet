@@ -167,7 +167,7 @@ export default function OrderDialog({
           // If offline or server error, queue for retry
           if (!navigator.onLine) {
             addPendingOrder(orderPayload);
-            toast.show("Offline — Bestellung wird gesendet, sobald Sie wieder online sind");
+            toast.show(t.order.offlineQueued);
             onSaved();
             return;
           }
@@ -181,7 +181,7 @@ export default function OrderDialog({
       } catch {
         // Network error — queue for retry
         addPendingOrder(orderPayload);
-        toast.show("Offline — Bestellung wird gesendet, sobald Sie wieder online sind");
+        toast.show(t.order.offlineQueued);
         onSaved();
       }
     });

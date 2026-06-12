@@ -19,7 +19,7 @@ export default function RequestResetPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-          Passwort zurücksetzen · Şifre sıfırla
+          Passwort zurücksetzen
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Bitte geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen Link.
@@ -33,7 +33,7 @@ export default function RequestResetPage() {
           href="/login"
           className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
         >
-          ← Zurück zum Login · Girişe dön
+          ← Zurück zum Login
         </Link>
       </div>
     </div>
