@@ -94,6 +94,8 @@ export type SettingsCustomer = {
   first_name: string;
   last_name: string | null;
   shop_name: string;
+  email: string | null;
+  phone: string | null;
   notes: string | null;
 };
 
@@ -101,6 +103,10 @@ const AddCustomerSchema = z.object({
   first_name: z.string().trim().min(1, "Ansprechpartner erforderlich").max(100),
   last_name: z.string().trim().max(100).optional(),
   shop_name: z.string().trim().min(1, "Shop-Name erforderlich").max(200),
+  // Optional contact details. Email format is validated only when present
+  // (same convention as the auth flows); phone is free text.
+  email: z.string().trim().email({ message: "Ungültige E-Mail-Adresse" }).max(200).optional(),
+  phone: z.string().trim().max(50).optional(),
   notes: z.string().trim().max(2000).optional(),
 });
 
@@ -114,7 +120,7 @@ export async function fetchCustomersForSettings(): Promise<{ data?: SettingsCust
 
   const { data, error } = await supabase
     .from("customers")
-    .select("id, first_name, last_name, shop_name, notes")
+    .select("id, first_name, last_name, shop_name, email, phone, notes")
     .eq("owner_id", user.id)
     .eq("is_active", true)
     .order("shop_name");
@@ -127,6 +133,8 @@ export async function addCustomerFromSettings(input: {
   first_name: string;
   last_name?: string;
   shop_name: string;
+  email?: string;
+  phone?: string;
   notes?: string;
 }): Promise<{ id?: string; error?: string }> {
   const parsed = AddCustomerSchema.safeParse(input);
@@ -146,6 +154,8 @@ export async function addCustomerFromSettings(input: {
       first_name: parsed.data.first_name,
       last_name: parsed.data.last_name || null,
       shop_name: parsed.data.shop_name,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
       notes: parsed.data.notes || null,
     })
     .select("id")
@@ -164,6 +174,8 @@ export async function updateCustomerFromSettings(input: {
   first_name: string;
   last_name?: string;
   shop_name: string;
+  email?: string;
+  phone?: string;
   notes?: string;
 }): Promise<{ success?: boolean; error?: string }> {
   const parsed = UpdateCustomerSchema.safeParse(input);
@@ -183,6 +195,8 @@ export async function updateCustomerFromSettings(input: {
       first_name: parsed.data.first_name,
       last_name: parsed.data.last_name || null,
       shop_name: parsed.data.shop_name,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
       notes: parsed.data.notes || null,
     })
     .eq("id", parsed.data.id)

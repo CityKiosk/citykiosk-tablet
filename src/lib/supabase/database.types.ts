@@ -83,34 +83,40 @@ export type Database = {
       customers: {
         Row: {
           created_at: string
+          email: string | null
           first_name: string
           id: string
           is_active: boolean
           last_name: string | null
           notes: string | null
           owner_id: string
+          phone: string | null
           shop_name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          email?: string | null
           first_name: string
           id?: string
           is_active?: boolean
           last_name?: string | null
           notes?: string | null
           owner_id?: string
+          phone?: string | null
           shop_name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
           is_active?: boolean
           last_name?: string | null
           notes?: string | null
           owner_id?: string
+          phone?: string | null
           shop_name?: string
           updated_at?: string
         }

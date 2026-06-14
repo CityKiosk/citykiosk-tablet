@@ -24,6 +24,8 @@ export default function AddCustomerDialog({
     customer ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") : ""
   );
   const [shopName, setShopName] = useState(customer?.shop_name ?? "");
+  const [email, setEmail] = useState(customer?.email ?? "");
+  const [phone, setPhone] = useState(customer?.phone ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -47,6 +49,11 @@ export default function AddCustomerDialog({
     const parts = trimmedName.split(/\s+/);
     const firstName = parts[0];
     const lastName = parts.length > 1 ? parts.slice(1).join(" ") : undefined;
+    // E-Mail/Telefon sind optional. Das E-Mail-Format wird serverseitig per Zod
+    // validiert (einzige Quelle der Wahrheit) — bei Fehler zeigt die Fehlerbox
+    // die Servermeldung. Kein clientseitiger Vorabcheck, der vom Server abweichen könnte.
+    const trimmedEmailValue = email.trim() || undefined;
+    const trimmedPhone = phone.trim() || undefined;
     const trimmedNotes = notes.trim() || undefined;
 
     startTransition(async () => {
@@ -56,12 +63,16 @@ export default function AddCustomerDialog({
             first_name: firstName,
             last_name: lastName,
             shop_name: trimmedShop,
+            email: trimmedEmailValue,
+            phone: trimmedPhone,
             notes: trimmedNotes,
           })
         : await addCustomerFromSettings({
             first_name: firstName,
             last_name: lastName,
             shop_name: trimmedShop,
+            email: trimmedEmailValue,
+            phone: trimmedPhone,
             notes: trimmedNotes,
           });
       if (result.error) {
@@ -116,6 +127,36 @@ export default function AddCustomerDialog({
             onChange={(e) => setShopName(e.target.value)}
             required
             maxLength={200}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label htmlFor="acu-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            {t.addCustomer.emailLabel}
+          </label>
+          <input
+            id="acu-email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            maxLength={200}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label htmlFor="acu-phone" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            {t.addCustomer.phoneLabel}
+          </label>
+          <input
+            id="acu-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            maxLength={50}
             className={inputCls}
           />
         </div>

@@ -447,6 +447,11 @@ export default function SettingsPage() {
                         <div className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
                           {c.shop_name}
                         </div>
+                        {(c.email || c.phone) && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {[c.email, c.phone].filter(Boolean).join(" · ")}
+                          </div>
+                        )}
                         {c.notes && (
                           <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                             {c.notes}

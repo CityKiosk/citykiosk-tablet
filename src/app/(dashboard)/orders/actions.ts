@@ -389,6 +389,8 @@ export type CustomerStatRow = {
   first_name: string;
   last_name: string | null;
   shop_name: string;
+  email: string | null;
+  phone: string | null;
   order_count: number;
   total_spent: number;
   last_order_at: string | null;
@@ -405,7 +407,7 @@ export async function fetchCustomerStats(): Promise<{ data?: CustomerStatRow[]; 
   // Fetch customers
   const { data: customers, error: custErr } = await supabase
     .from("customers")
-    .select("id, first_name, last_name, shop_name")
+    .select("id, first_name, last_name, shop_name, email, phone")
     .eq("owner_id", user.id)
     .eq("is_active", true)
     .order("shop_name");
@@ -440,6 +442,8 @@ export async function fetchCustomerStats(): Promise<{ data?: CustomerStatRow[]; 
       first_name: c.first_name,
       last_name: c.last_name,
       shop_name: c.shop_name,
+      email: c.email,
+      phone: c.phone,
       order_count: s?.orderCount ?? 0,
       total_spent: s?.totalSpent ?? 0,
       last_order_at: s?.lastOrderAt ?? null,

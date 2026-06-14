@@ -93,6 +93,8 @@ type LocaleDict = {
     editTitle: string;
     nameLabel: string;
     shopLabel: string;
+    emailLabel: string;
+    phoneLabel: string;
     notesLabel: string;
     nameRequired: string;
     shopRequired: string;
@@ -476,6 +478,8 @@ export const dict: Record<Locale, LocaleDict> = {
       editTitle: "Kunde bearbeiten",
       nameLabel: "Ansprechpartner",
       shopLabel: "Shop-Name",
+      emailLabel: "E-Mail",
+      phoneLabel: "Telefon",
       notesLabel: "Notizen",
       nameRequired: "Ansprechpartner erforderlich",
       shopRequired: "Shop-Name erforderlich",

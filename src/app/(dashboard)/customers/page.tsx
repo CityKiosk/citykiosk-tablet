@@ -45,7 +45,9 @@ export default function CustomersPage() {
       (c) =>
         c.shop_name.toLowerCase().includes(q) ||
         c.first_name.toLowerCase().includes(q) ||
-        (c.last_name?.toLowerCase().includes(q) ?? false)
+        (c.last_name?.toLowerCase().includes(q) ?? false) ||
+        (c.email?.toLowerCase().includes(q) ?? false) ||
+        (c.phone?.toLowerCase().includes(q) ?? false)
     );
   }, [customers, locale, search]);
 
@@ -115,7 +117,19 @@ export default function CustomersPage() {
             {filtered.map((c) => (
               <tr key={c.customer_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-slate-50 max-w-[200px] truncate">{c.shop_name}</td>
-                <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">{customerName(c)}</td>
+                <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">
+                  <div>{customerName(c)}</div>
+                  {c.email && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-[220px]">
+                      {c.email}
+                    </div>
+                  )}
+                  {c.phone && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-[220px]">
+                      {c.phone}
+                    </div>
+                  )}
+                </td>
                 <td className="tabular px-5 py-3.5 text-right">
                   {c.order_count > 0 ? (
                     <div>
