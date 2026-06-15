@@ -206,6 +206,36 @@ export async function updateCustomerFromSettings(input: {
   return { success: true };
 }
 
+const DeleteCustomerSchema = z.object({ id: z.string().uuid() });
+
+/** Soft-delete: setzt is_active=false. Der Kunde verschwindet aus allen
+ *  Listen (Settings, /customers, OrderDialog — alle filtern is_active=true),
+ *  aber bestehende Bestellungen behalten ihre customer_id und damit den
+ *  Verlauf. Kein Hard-Delete → orders.customer_id wird NICHT auf null gesetzt. */
+export async function deleteCustomerFromSettings(input: {
+  id: string;
+}): Promise<{ success?: boolean; error?: string }> {
+  const parsed = DeleteCustomerSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet" };
+
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
+
+  // RLS'e ek defense: owner_id eşitliği explicit
+  const { error } = await supabase
+    .from("customers")
+    .update({ is_active: false })
+    .eq("id", parsed.data.id)
+    .eq("owner_id", user.id);
+
+  if (error) return { error: "Kunde konnte nicht gelöscht werden" };
+  return { success: true };
+}
+
 /** Server-side PIN status used by PinGate. Returns whether PIN exists and
  *  whether the unlock window for the given scope is currently active. */
 export async function getPinStatus(scope: PinScope) {

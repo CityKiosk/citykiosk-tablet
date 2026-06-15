@@ -103,6 +103,9 @@ type LocaleDict = {
     updated: string;
     saveError: string;
     editAria: (shop: string) => string;
+    deleteAria: (shop: string) => string;
+    deleteConfirm: (shop: string) => string;
+    deleted: string;
   };
   add: {
     title: string;
@@ -488,6 +491,10 @@ export const dict: Record<Locale, LocaleDict> = {
       updated: "Kunde gespeichert",
       saveError: "Kunde konnte nicht erstellt werden",
       editAria: (shop: string) => `${shop} bearbeiten`,
+      deleteAria: (shop: string) => `${shop} löschen`,
+      deleteConfirm: (shop: string) =>
+        `„${shop}" wirklich löschen? Der Kunde wird aus den Listen entfernt; bestehende Bestellungen bleiben erhalten.`,
+      deleted: "Kunde gelöscht",
     },
     add: {
       title: "Neues Produkt",
