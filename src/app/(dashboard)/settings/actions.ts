@@ -248,6 +248,15 @@ export async function deleteCustomerFromSettings(input: {
   const verify = await verifyPin(parsed.data.pin, "stock");
   if (!verify.success) return { error: verify.error ?? "wrong_pin" };
 
+  // verify_admin_pin('stock') entsperrt als Nebeneffekt das Stock-Scope für
+  // ~5 Min (admin_pin_unlocks-Stamp). Hier wollten wir aber nur RE-AUTHEN, keine
+  // Stock-Session. Das ungewollte Fenster sofort wieder schließen, damit das
+  // No-Cascade-Modell (pinSession.ts) gewahrt bleibt — sonst bliebe nach dem
+  // Verlassen von /settings (lockPin entfernt nur 'settings') ein offenes
+  // Stock-Fenster, durch das updateStock per DevTools ohne Lager-PIN liefe.
+  // UX-neutral: PinGate fragt beim /stock-Einstieg ohnehin immer neu.
+  await supabase.rpc("lock_admin_pin", { p_scope: "stock" });
+
   // RLS'e ek defense: owner_id eşitliği explicit
   const { error } = await supabase
     .from("customers")
