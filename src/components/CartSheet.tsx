@@ -3,9 +3,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useCart, useCartDiscount } from "@/lib/cartStore";
 import { useI18n } from "./I18nProvider";
+import { useToast } from "./Toast";
 import { formatPrice } from "@/lib/i18n";
 import QtyControl from "./QtyControl";
-import { XIcon } from "./icons";
+import { XIcon, Trash2Icon } from "./icons";
 import OrderDialog from "./OrderDialog";
 import DiscountEditor from "./DiscountEditor";
 import {
@@ -18,6 +19,7 @@ import { useLongPress } from "@/lib/useLongPress";
 
 export default function CartSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
+  const toast = useToast();
   const { quantities, setQty, clear, totalCount, kindCount } = useCart();
   const [discountPct, setDiscountPct] = useCartDiscount();
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,27 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
     if (dragY > 80) onClose();
     setTouchStart(null);
     setDragY(0);
+  }
+
+  // Warenkorb komplett leeren. clear() resettet quantities UND Rabatt (damit
+  // der Rabatt nicht zum nächsten Kunden überträgt). Sofort leeren statt Modal:
+  // niedrig-riskanter Client-State, voll reversibel per Undo-Toast — wir
+  // sichern quantities + discountPct VOR dem Leeren und stellen beides wieder her.
+  function handleClearCart() {
+    const snapshot = { ...quantities };
+    const prevDiscount = discountPct;
+    clear();
+    toast.showWithAction(t.catalog.cartCleared, {
+      label: t.catalog.undo,
+      onClick: () => {
+        // Replace, nicht merge: erst clear(), damit Artikel, die nach dem
+        // Leeren (z.B. im Katalog) hinzugefügt wurden, NICHT zusätzlich
+        // erhalten bleiben — Undo stellt exakt den Stand vor dem Leeren her.
+        clear();
+        for (const [pid, q] of Object.entries(snapshot)) setQty(pid, q);
+        setDiscountPct(prevDiscount);
+      },
+    });
   }
 
   if (!open) return null;
@@ -261,13 +284,23 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
                       {formatPrice(gross)}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setOrderOpen(true)}
-                    className="cursor-pointer h-12 px-6 bg-sky-700 hover:bg-sky-800 text-white rounded-xl font-semibold text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
-                  >
-                    {t.catalog.createOrder}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleClearCart}
+                      className="cursor-pointer h-12 px-4 inline-flex items-center gap-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 transition-colors"
+                    >
+                      <Trash2Icon width={16} height={16} aria-hidden="true" />
+                      {t.catalog.cartClear}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrderOpen(true)}
+                      className="cursor-pointer h-12 px-6 bg-sky-700 hover:bg-sky-800 text-white rounded-xl font-semibold text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
+                    >
+                      {t.catalog.createOrder}
+                    </button>
+                  </div>
                 </div>
               </div>
             );

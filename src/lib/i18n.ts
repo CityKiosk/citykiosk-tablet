@@ -47,6 +47,8 @@ type LocaleDict = {
     cartTitle: string;
     cartHint: string;
     cartClose: string;
+    cartClear: string;
+    cartCleared: string;
     backToTop: string;
     addCategory: string;
     editMode: string;
@@ -439,6 +441,8 @@ export const dict: Record<Locale, LocaleDict> = {
       cartTitle: "Ausgewählte Artikel",
       cartHint: "Stückzahlen können hier auch angepasst werden",
       cartClose: "Warenkorb schließen",
+      cartClear: "Leeren",
+      cartCleared: "Warenkorb geleert",
       backToTop: "Nach oben",
       addCategory: "Kategorie hinzufügen",
       editMode: "Bearbeiten",
