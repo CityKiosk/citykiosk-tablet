@@ -206,24 +206,47 @@ export async function updateCustomerFromSettings(input: {
   return { success: true };
 }
 
-const DeleteCustomerSchema = z.object({ id: z.string().uuid() });
+const DeleteCustomerSchema = z.object({
+  id: z.string().uuid(),
+  // Inline regex statt PinSchema, da PinSchema weiter unten deklariert ist
+  // (Top-level const → Temporal Dead Zone, würde hier zur Ladezeit knallen).
+  pin: z.string().regex(/^[0-9]{6}$/),
+});
 
-/** Soft-delete: setzt is_active=false. Der Kunde verschwindet aus allen
- *  Listen (Settings, /customers, OrderDialog — alle filtern is_active=true),
- *  aber bestehende Bestellungen behalten ihre customer_id und damit den
- *  Verlauf. Kein Hard-Delete → orders.customer_id wird NICHT auf null gesetzt. */
+/** Soft-delete (is_active=false), abgesichert durch die LAGER-PIN (stock scope).
+ *  Re-Auth direkt vor der destruktiven Aktion mit einer SEPARATEN PIN — der
+ *  Owner ist zwar schon per Settings-PIN drin, muss zum Löschen aber zusätzlich
+ *  die Lager-PIN kennen. Ohne gesetzte Lager-PIN wird das Löschen blockiert,
+ *  sonst würde verify_admin_pin('stock') auf die Admin-PIN zurückfallen und die
+ *  zweite Hürde wäre wirkungslos. Kein Hard-Delete → Bestellungen behalten ihre
+ *  customer_id und damit den Verlauf. */
 export async function deleteCustomerFromSettings(input: {
   id: string;
-}): Promise<{ success?: boolean; error?: string }> {
+  pin: string;
+}): Promise<{ success?: boolean; error?: PinErrorCode | "lager_pin_required" }> {
   const parsed = DeleteCustomerSchema.safeParse(input);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Ungültige Eingabe" };
+  if (!parsed.success) return { error: "invalid_format" };
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Nicht angemeldet" };
+  if (!user) return { error: "unauthenticated" };
 
+  // Defense-in-depth: man ist legitim in /settings (Server vertraut dem
+  // Client-Gate nicht).
   const gate = await requirePinUnlocked("settings");
-  if (gate) return { error: "PIN erforderlich" };
+  if (gate) return { error: "unauthenticated" };
+
+  // Lager-PIN MUSS gesetzt sein — sonst greift bei verify_admin_pin('stock')
+  // der Admin-PIN-Fallback und die zweite Hürde wäre wirkungslos.
+  const { data: hasLagerPin } = await supabase.rpc("has_admin_pin_for_scope", {
+    p_scope: "stock",
+  });
+  if (!hasLagerPin) return { error: "lager_pin_required" };
+
+  // Re-Auth mit der Lager-PIN (strict scope → NUR die Lager-PIN verifiziert,
+  // nicht die Admin-PIN; inkl. Rate-Limit auf user.id:stock gegen Brute-Force).
+  const verify = await verifyPin(parsed.data.pin, "stock");
+  if (!verify.success) return { error: verify.error ?? "wrong_pin" };
 
   // RLS'e ek defense: owner_id eşitliği explicit
   const { error } = await supabase
@@ -232,7 +255,7 @@ export async function deleteCustomerFromSettings(input: {
     .eq("id", parsed.data.id)
     .eq("owner_id", user.id);
 
-  if (error) return { error: "Kunde konnte nicht gelöscht werden" };
+  if (error) return { error: "internal" };
   return { success: true };
 }
 

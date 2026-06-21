@@ -108,7 +108,9 @@ type LocaleDict = {
     saveError: string;
     editAria: (shop: string) => string;
     deleteAria: (shop: string) => string;
-    deleteConfirm: (shop: string) => string;
+    deletePinTitle: string;
+    deletePinPrompt: (shop: string) => string;
+    deleteNoLagerPin: string;
     deleted: string;
   };
   add: {
@@ -500,8 +502,9 @@ export const dict: Record<Locale, LocaleDict> = {
       saveError: "Kunde konnte nicht erstellt werden",
       editAria: (shop: string) => `${shop} bearbeiten`,
       deleteAria: (shop: string) => `${shop} löschen`,
-      deleteConfirm: (shop: string) =>
-        `„${shop}" wirklich löschen? Der Kunde wird aus den Listen entfernt; bestehende Bestellungen bleiben erhalten.`,
+      deletePinTitle: "Kunde löschen",
+      deletePinPrompt: (shop: string) => `Lager-PIN eingeben, um „${shop}" zu löschen.`,
+      deleteNoLagerPin: "Bitte zuerst eine Lager-PIN festlegen (Einstellungen → PIN).",
       deleted: "Kunde gelöscht",
     },
     add: {

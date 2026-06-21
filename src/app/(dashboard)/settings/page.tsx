@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ProductForm from "@/components/ProductForm";
 import AddCategoryDialog from "@/components/AddCategoryDialog";
 import AddCustomerDialog from "@/components/AddCustomerDialog";
+import DeleteCustomerPinDialog from "@/components/DeleteCustomerPinDialog";
 import LoadError from "@/components/LoadError";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import { useDisplayFields, type DisplayFields } from "@/components/DisplayFieldsProvider";
@@ -29,7 +30,6 @@ import {
   hasPin as hasPinAction,
   removePin as removePinAction,
   fetchCustomersForSettings,
-  deleteCustomerFromSettings,
   type SettingsCustomer,
 } from "@/app/(dashboard)/settings/actions";
 import PinPad from "@/components/PinPad";
@@ -91,6 +91,7 @@ export default function SettingsPage() {
   const [showAddCat, setShowAddCat] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [editCustomer, setEditCustomer] = useState<SettingsCustomer | null>(null);
+  const [deletePinCustomer, setDeletePinCustomer] = useState<SettingsCustomer | null>(null);
   const [showAddProd, setShowAddProd] = useState(false);
   const [editProd, setEditProd] = useState<SettingsProduct | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; onYes: () => void } | null>(null);
@@ -473,24 +474,22 @@ export default function SettingsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            setConfirm({
-                              message: t.addCustomer.deleteConfirm(c.shop_name),
-                              onYes: () => {
-                                startTransition(async () => {
-                                  const result = await deleteCustomerFromSettings({ id: c.id });
-                                  if (result.error) {
-                                    toast.show(result.error);
-                                    setConfirm(null);
-                                    return;
-                                  }
-                                  reload();
-                                  toast.show(t.addCustomer.deleted);
-                                  setConfirm(null);
-                                });
-                              },
-                            })
-                          }
+                          onClick={() => {
+                            // Löschen erfordert die Lager-PIN. Ohne gesetzte
+                            // Lager-PIN blockieren + Hinweis (Server erzwingt es
+                            // zusätzlich). Bei noch unbekanntem Status (null) nichts tun.
+                            if (stockPinExists === false) {
+                              toast.show(t.addCustomer.deleteNoLagerPin);
+                              return;
+                            }
+                            if (stockPinExists === null) {
+                              // Lager-PIN-Status noch nicht geladen — kurzes
+                              // Feedback statt stillem No-op.
+                              toast.show(t.common.loading);
+                              return;
+                            }
+                            setDeletePinCustomer(c);
+                          }}
                           aria-label={t.addCustomer.deleteAria(c.shop_name)}
                           className="cursor-pointer w-11 h-11 inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 transition-colors"
                         >
@@ -658,6 +657,17 @@ export default function SettingsPage() {
             reload();
             toast.show(t.addCustomer.updated);
             setEditCustomer(null);
+          }}
+        />
+      )}
+      {deletePinCustomer && (
+        <DeleteCustomerPinDialog
+          customer={deletePinCustomer}
+          onClose={() => setDeletePinCustomer(null)}
+          onDeleted={() => {
+            reload();
+            toast.show(t.addCustomer.deleted);
+            setDeletePinCustomer(null);
           }}
         />
       )}
