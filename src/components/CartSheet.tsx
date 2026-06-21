@@ -9,6 +9,7 @@ import QtyControl from "./QtyControl";
 import { XIcon, Trash2Icon } from "./icons";
 import OrderDialog from "./OrderDialog";
 import DiscountEditor from "./DiscountEditor";
+import ConfirmDialog from "./ConfirmDialog";
 import {
   fetchCartProducts,
   type CartProduct,
@@ -28,6 +29,7 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
   const [dragY, setDragY] = useState(0);
   const [orderOpen, setOrderOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const longPressHandlers = useLongPress(() => setDiscountOpen(true));
 
@@ -46,18 +48,28 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
     });
   }, [open]);
 
+  // Body-Scroll-Lock — nur an `open` gebunden, NICHT an die Dialog-States,
+  // damit das Lock beim Öffnen/Schließen verschachtelter Dialoge nicht
+  // freigegeben + neu gesetzt wird (würde die Scrollposition springen lassen).
+  useEffect(() => {
+    if (!open) return;
+    return lockBodyScroll();
+  }, [open]);
+
+  // Escape schließt das Sheet — aber nur, wenn KEIN verschachtelter Dialog
+  // (Bestellung / Rabatt / Leeren-Bestätigung) offen ist. Diese rendern über
+  // Modal mit eigenem document-Escape-Listener; ohne diese Bedingung würde ein
+  // Escape beide Listener feuern und Dialog UND Sheet gleichzeitig schließen.
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (orderOpen || discountOpen || confirmClearOpen) return;
+      onClose();
     }
     document.addEventListener("keydown", onKey);
-    const releaseLock = lockBodyScroll();
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      releaseLock();
-    };
-  }, [open, onClose]);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose, orderOpen, discountOpen, confirmClearOpen]);
 
   const items = useMemo(() => {
     return Object.entries(quantities)
@@ -96,24 +108,13 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
   }
 
   // Warenkorb komplett leeren. clear() resettet quantities UND Rabatt (damit
-  // der Rabatt nicht zum nächsten Kunden überträgt). Sofort leeren statt Modal:
-  // niedrig-riskanter Client-State, voll reversibel per Undo-Toast — wir
-  // sichern quantities + discountPct VOR dem Leeren und stellen beides wieder her.
+  // der Rabatt nicht zum nächsten Kunden überträgt). Bestätigung via
+  // ConfirmDialog VOR dem Leeren: auf dem geteilten Tablet ist ein blockierender
+  // Ja/Nein-Schritt zuverlässiger als ein zeit-/aufmerksamkeitsabhängiger Undo-Toast.
   function handleClearCart() {
-    const snapshot = { ...quantities };
-    const prevDiscount = discountPct;
     clear();
-    toast.showWithAction(t.catalog.cartCleared, {
-      label: t.catalog.undo,
-      onClick: () => {
-        // Replace, nicht merge: erst clear(), damit Artikel, die nach dem
-        // Leeren (z.B. im Katalog) hinzugefügt wurden, NICHT zusätzlich
-        // erhalten bleiben — Undo stellt exakt den Stand vor dem Leeren her.
-        clear();
-        for (const [pid, q] of Object.entries(snapshot)) setQty(pid, q);
-        setDiscountPct(prevDiscount);
-      },
-    });
+    toast.show(t.catalog.cartCleared);
+    setConfirmClearOpen(false);
   }
 
   if (!open) return null;
@@ -287,7 +288,7 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={handleClearCart}
+                      onClick={() => setConfirmClearOpen(true)}
                       className="cursor-pointer h-12 px-4 inline-flex items-center gap-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 transition-colors"
                     >
                       <Trash2Icon width={16} height={16} aria-hidden="true" />
@@ -329,6 +330,15 @@ export default function CartSheet({ open, onClose }: { open: boolean; onClose: (
           onClose={() => setDiscountOpen(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title={t.catalog.cartClearTitle}
+        message={t.catalog.cartClearConfirm}
+        confirmLabel={t.catalog.cartClear}
+        onConfirm={handleClearCart}
+        onCancel={() => setConfirmClearOpen(false)}
+      />
     </>
   );
 }
