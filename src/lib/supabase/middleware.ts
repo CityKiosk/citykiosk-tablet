@@ -16,6 +16,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './database.types'
 import { SESSION_COOKIE } from '@/lib/session'
+import { isRecoverySession } from '@/lib/authRecovery'
 
 // Login olmadan erişilebilecek path'ler
 const PUBLIC_PATHS = ['/login', '/reset-password/request', '/reset-password/confirm', '/auth/callback', '/api/health', '/v']
@@ -73,6 +74,25 @@ export async function updateSession(request: NextRequest) {
       valid = data === true
     }
     if (!valid) {
+      // A password-reset (recovery) session has NO app-session slot: it's minted
+      // by the email link (exchangeCodeForSession), not login/register_session.
+      // Signing it out here — e.g. when the (auth) layout's "/" prefetch hits
+      // this guard — kills the recovery session before the user can submit the
+      // new password ("Sitzung abgelaufen"). Detect it via the GoTrue-signed amr
+      // claim (same trust basis as confirmPasswordReset) and, instead of signing
+      // out, confine it to the confirm page while KEEPING its cookies.
+      const { data: claimsData } = await supabase.auth.getClaims()
+      const amr = (claimsData?.claims as { amr?: unknown } | undefined)?.amr
+      if (isRecoverySession(amr)) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/reset-password/confirm'
+        const redirectResponse = NextResponse.redirect(url)
+        // Carry any refreshed auth cookies (no signOut → session stays alive).
+        supabaseResponse.cookies.getAll().forEach((c) => redirectResponse.cookies.set(c))
+        return redirectResponse
+      }
+
+      // Normal (amr=password) session with no valid slot → existing behaviour.
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/login'

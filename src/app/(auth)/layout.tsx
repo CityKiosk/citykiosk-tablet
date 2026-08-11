@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 dark:from-slate-950 dark:via-sky-950/20 dark:to-slate-900">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-block">
+          <Link href="/" prefetch={false} className="inline-block">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
               Souvenirs Berlin
             </h1>

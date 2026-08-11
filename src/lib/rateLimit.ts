@@ -62,3 +62,8 @@ export const pinSetRateLimit = createLimiter(3, 5 * 60_000);
  * abuse. Idempotency key handles same-key duplicates; this caps fresh-key
  * spam where an attacker generates new keys to bypass dedup. */
 export const createOrderRateLimit = createLimiter(60, 60_000);
+
+/** Password reset confirm: 5 attempts per minute per user.
+ * Keyed on user.id — same reasoning as pinVerifyRateLimit: the threat model
+ * is a local attacker on the shared tablet, so IP is meaningless. */
+export const passwordResetRateLimit = createLimiter(5, 60_000);
