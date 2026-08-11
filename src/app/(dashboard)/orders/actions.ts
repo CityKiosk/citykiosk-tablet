@@ -88,20 +88,63 @@ export async function createOrder(input: {
   // been persisted yet and wrongly return success. The unique index enforces
   // single-insertion atomically at insert time.
 
-  // Validate customer ownership if existing customer selected
+  // Run every rejection point BEFORE the only side effect above the insert
+  // (customer creation), so a rejected order never leaves an orphan customer
+  // row behind (this ordering is the fix for that regression).
+
+  // 1) Verify every ordered product exists, is owned by this user, and that the
+  //    client-sent price matches the DB (prevents price/product tampering).
+  const productIds = data.items.map((i) => i.product_id);
+  const { data: dbProducts, error: prodErr } = await supabase
+    .from("products")
+    .select("id, price")
+    .in("id", productIds)
+    .eq("owner_id", user.id);
+
+  if (prodErr) return { error: "Produkte konnten nicht geprüft werden" };
+
+  const priceMap = new Map((dbProducts ?? []).map((p) => [p.id, p.price]));
+  for (const item of data.items) {
+    const dbPrice = priceMap.get(item.product_id);
+    // Unknown / deleted / foreign product → reject. A crafted product_id could
+    // otherwise carry an arbitrary client price into the order (and mis-fire
+    // the stock trigger).
+    if (dbPrice === undefined) {
+      return { error: "Produkt nicht gefunden — bitte Seite neu laden" };
+    }
+    if (Math.abs(dbPrice - item.unit_price) > 0.01) {
+      return { error: "Produktpreis stimmt nicht überein — bitte Seite neu laden" };
+    }
+  }
+
+  // 2) Order-level discount — gate the non-zero path behind the admin PIN
+  //    (`settings` scope). A hostile customer with DevTools cannot post a
+  //    discounted order without first unlocking the PIN.
+  const discountPct = data.discount_pct ?? 0;
+  if (discountPct > 0) {
+    const gate = await requirePinUnlocked("settings");
+    if (gate) return { error: "PIN erforderlich" };
+  }
+
+  // 3) Generate order number
+  const { data: orderNum } = await supabase.rpc("next_order_number");
+  if (!orderNum) return { error: "Bestellnummer konnte nicht generiert werden" };
+
+  // 4) Resolve the customer LAST — the only side effect above the insert, so it
+  //    runs after every rejection point (no orphan customer rows).
   let customerId = data.customer_id;
   if (customerId) {
+    // Must be owned AND still active — a soft-deleted (is_active=false) customer
+    // must not be re-attached to a fresh order (threat-model.md K5 / GDPR).
     const { data: ownedCustomer } = await supabase
       .from("customers")
       .select("id")
       .eq("id", customerId)
       .eq("owner_id", user.id)
+      .eq("is_active", true)
       .single();
     if (!ownedCustomer) return { error: "Ungültiger Kunde" };
-  }
-
-  // If no existing customer, create one
-  if (!customerId) {
+  } else {
     const { data: newCustomer, error: custErr } = await supabase
       .from("customers")
       .insert({
@@ -115,44 +158,6 @@ export async function createOrder(input: {
 
     if (custErr) return { error: "Kunde konnte nicht erstellt werden" };
     customerId = newCustomer.id;
-  }
-
-  // Verify every ordered product exists, is owned by this user, and that the
-  // client-sent price matches the DB (prevents price/product tampering).
-  const productIds = data.items.map((i) => i.product_id);
-  const { data: dbProducts, error: prodErr } = await supabase
-    .from("products")
-    .select("id, price")
-    .in("id", productIds)
-    .eq("owner_id", user.id);
-
-  if (prodErr) return { error: "Produkte konnten nicht geprüft werden" };
-
-  const priceMap = new Map((dbProducts ?? []).map((p) => [p.id, p.price]));
-  for (const item of data.items) {
-    const dbPrice = priceMap.get(item.product_id);
-    // Unknown / deleted / foreign product → reject. Previously this case was
-    // skipped, so a crafted product_id could carry an arbitrary client price
-    // into the order (and mis-fire the stock trigger).
-    if (dbPrice === undefined) {
-      return { error: "Produkt nicht gefunden — bitte Seite neu laden" };
-    }
-    if (Math.abs(dbPrice - item.unit_price) > 0.01) {
-      return { error: "Produktpreis stimmt nicht überein — bitte Seite neu laden" };
-    }
-  }
-
-  // Generate order number
-  const { data: orderNum } = await supabase.rpc("next_order_number");
-  if (!orderNum) return { error: "Bestellnummer konnte nicht generiert werden" };
-
-  // Order-level discount — gate the non-zero path behind the admin PIN
-  // (`settings` scope). A hostile customer with DevTools cannot post a
-  // discounted order without first unlocking the PIN.
-  const discountPct = data.discount_pct ?? 0;
-  if (discountPct > 0) {
-    const gate = await requirePinUnlocked("settings");
-    if (gate) return { error: "PIN erforderlich" };
   }
 
   // Calculate net subtotal from verified prices, then apply discount + VAT.

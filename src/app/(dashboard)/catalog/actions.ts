@@ -252,7 +252,9 @@ export type CartProduct = {
   category_id: string | null;
   sku: string | null;
   description_de: string | null;
-  stock: number;
+  // NOTE: `stock` bilerek YOK. Sepet (CartSheet) stok göstermiyor ve bu action
+  // müşteri-facing /catalog'dan PIN'siz çağrılıyor — stok, Lager-PIN'in koruduğu
+  // veridir, buradan sızmamalı (bkz. threat-model.md K3).
 };
 
 export type CartCategory = {
@@ -272,7 +274,7 @@ export async function fetchCartProducts(): Promise<{
   const [prodRes, catRes] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name_de, price, image_url, category_id, sku, description_de, stock")
+      .select("id, name_de, price, image_url, category_id, sku, description_de")
       .eq("is_active", true)
       .eq("owner_id", user.id),
     supabase
@@ -299,6 +301,12 @@ export async function fetchCategories(): Promise<{ data?: SettingsCategory[]; er
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  // Settings-only read: gate behind the settings PIN. Server actions are public
+  // HTTP endpoints (action id in the client bundle) — auth alone lets a customer
+  // call this from the console. (bkz. threat-model.md K1/K5)
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
     .from("categories")
@@ -364,6 +372,12 @@ export async function fetchProducts(): Promise<{ data?: SettingsProduct[]; error
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
+
+  // Settings-only read: returns stock + is_active (hidden products), so it must
+  // sit behind the settings PIN. Server actions are directly callable from the
+  // console via their action id. (bkz. threat-model.md K1/K5)
+  const gate = await requirePinUnlocked("settings");
+  if (gate) return { error: "PIN erforderlich" };
 
   const { data, error } = await supabase
     .from("products")

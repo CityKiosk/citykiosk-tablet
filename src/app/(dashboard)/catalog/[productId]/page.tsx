@@ -25,10 +25,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) redirect("/login");
 
-  // Fetch current product (explicit owner_id for defense-in-depth alongside RLS)
+  // Fetch current product (explicit owner_id for defense-in-depth alongside RLS).
+  // Explicit column list — NOT select("*"): this is a customer-facing page, so
+  // stock/owner_id/is_active must not leak into the RSC payload (threat-model.md K3).
   const { data: product } = await supabase
     .from("products")
-    .select("*, category:categories(id, name_de)")
+    .select("id, name_de, price, image_url, description_de, dimensions, packaging_unit, sku, category:categories(id, name_de)")
     .eq("id", productId)
     .eq("owner_id", user.id)
     .single();

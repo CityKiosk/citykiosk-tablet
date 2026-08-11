@@ -200,7 +200,8 @@ export async function updateCustomerFromSettings(input: {
       notes: parsed.data.notes || null,
     })
     .eq("id", parsed.data.id)
-    .eq("owner_id", user.id);
+    .eq("owner_id", user.id)
+    .eq("is_active", true); // soft-deleted Kunden nicht bearbeiten (threat-model.md K5)
 
   if (error) return { error: "Kunde konnte nicht gespeichert werden" };
   return { success: true };
