@@ -7,17 +7,13 @@ import PageHeader from "@/components/PageHeader";
 import { StockRow } from "@/components/StockRow";
 import StockDetailDialog from "@/components/StockDetailDialog";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import LoadError from "@/components/LoadError";
 import { SearchIcon } from "@/components/icons";
 import PinGate from "@/components/PinGate";
 import IdleLock, { ADMIN_IDLE_LOCK_MS } from "@/components/IdleLock";
-import { updateStock } from "./actions";
+import { fetchStockProducts, updateStock } from "./actions";
 import { lockPin } from "@/app/(dashboard)/settings/actions";
 import type { StockCategory, StockProduct } from "./types";
-
-type Props = {
-  products: StockProduct[];
-  categories: StockCategory[];
-};
 
 type SortKey = "low-first" | "az";
 
@@ -28,7 +24,7 @@ type SortKey = "low-first" | "az";
 // class of leak.
 const UNLOCK_KEY = "souvenir_admin_unlocked_stock";
 
-export function StockClient({ products: initialProducts, categories }: Props) {
+export function StockClient() {
   const { t, locale } = useI18n();
   const toast = useToast();
 
@@ -46,12 +42,39 @@ export function StockClient({ products: initialProducts, categories }: Props) {
     };
   }, []);
 
-  // Local product state — lets us reflect saved stock values without a full
-  // page reload. Server-side revalidatePath still refreshes it on navigation.
-  const [products, setProducts] = useState<StockProduct[]>(initialProducts);
+  // Data is fetched client-side AFTER the PIN unlocks (via the PIN-gated
+  // fetchStockProducts action) — never server-rendered — so stock/prices are
+  // never in the page payload before the Lager-PIN. Mirrors orders/customers.
+  const [products, setProducts] = useState<StockProduct[]>([]);
+  const [categories, setCategories] = useState<StockCategory[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const load = useCallback(() => {
+    setLoaded(false);
+    setLoadFailed(false);
+    fetchStockProducts()
+      .then((res) => {
+        // Distinguish "no products" (empty array) from a load/gate error so a
+        // failure never masquerades as an empty inventory.
+        if (res.products) {
+          setProducts(res.products);
+          setCategories(res.categories ?? []);
+        } else {
+          setLoadFailed(true);
+        }
+        setLoaded(true);
+      })
+      .catch(() => {
+        setLoadFailed(true);
+        setLoaded(true);
+      });
+  }, []);
+
+  // Kick off the fetch only once the PIN is unlocked (server window open).
   useEffect(() => {
-    setProducts(initialProducts);
-  }, [initialProducts]);
+    if (unlocked) load();
+  }, [unlocked, load]);
 
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string>("all");
@@ -138,6 +161,31 @@ export function StockClient({ products: initialProducts, categories }: Props) {
           fallbackHint={t.pin.fallbackHintStock}
           onUnlocked={() => setUnlocked(true)}
         />
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div>
+        <PageHeader title={t.stock.title} subtitle={t.stock.subtitle} />
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-16 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 animate-pulse"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div>
+        <PageHeader title={t.stock.title} subtitle={t.stock.subtitle} />
+        <LoadError onRetry={load} />
       </div>
     );
   }

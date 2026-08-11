@@ -15,6 +15,13 @@ export async function fetchStockProducts(): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet" };
 
+  // Lager-PIN gate: /stock verisi PIN girilmeden client'a GİTMEZ. page.tsx
+  // artık veriyi server-side çekmiyor; bu kontrol DevTools'tan doğrudan action
+  // çağrısını da kapatır — veri yalnız server-doğrulamalı unlock penceresi
+  // açıkken döner (orders/customers/settings ile aynı defense-in-depth deseni).
+  const gate = await requirePinUnlocked("stock");
+  if (gate) return { error: gate.error };
+
   const [prodRes, catRes] = await Promise.all([
     supabase
       .from("products")

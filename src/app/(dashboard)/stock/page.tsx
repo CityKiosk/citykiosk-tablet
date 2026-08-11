@@ -1,12 +1,17 @@
 // ============================================================================
 // Stock Page — Server Component
 // ============================================================================
-// Auth-checked server fetch → StockClient (password-gated, admin-only).
+// Auth-checked shell → StockClient (password-gated, admin-only).
+//
+// WICHTIG: Bestandsdaten werden hier NICHT server-seitig geladen. Sonst
+// lägen Bestand/Preis im RSC-Payload, bevor die PinGate im Client mountet —
+// mit DevTools ohne Lager-PIN auslesbar. Stattdessen holt StockClient die
+// Daten nach dem PIN-Unlock client-seitig über das gegatete
+// fetchStockProducts (gleiches Muster wie /orders, /customers, /settings).
 // ============================================================================
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { fetchStockProducts } from "./actions";
 import { StockClient } from "./StockClient";
 import type { Metadata } from "next";
 
@@ -20,12 +25,5 @@ export default async function StockPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) redirect("/login");
 
-  const { products, categories } = await fetchStockProducts();
-
-  return (
-    <StockClient
-      products={products ?? []}
-      categories={categories ?? []}
-    />
-  );
+  return <StockClient />;
 }
