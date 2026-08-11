@@ -117,21 +117,28 @@ export async function createOrder(input: {
     customerId = newCustomer.id;
   }
 
-  // Verify product prices against database (prevent price manipulation)
+  // Verify every ordered product exists, is owned by this user, and that the
+  // client-sent price matches the DB (prevents price/product tampering).
   const productIds = data.items.map((i) => i.product_id);
-  const { data: dbProducts } = await supabase
+  const { data: dbProducts, error: prodErr } = await supabase
     .from("products")
     .select("id, price")
     .in("id", productIds)
     .eq("owner_id", user.id);
 
-  if (dbProducts) {
-    const priceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
-    for (const item of data.items) {
-      const dbPrice = priceMap.get(item.product_id);
-      if (dbPrice !== undefined && Math.abs(dbPrice - item.unit_price) > 0.01) {
-        return { error: "Produktpreis stimmt nicht überein — bitte Seite neu laden" };
-      }
+  if (prodErr) return { error: "Produkte konnten nicht geprüft werden" };
+
+  const priceMap = new Map((dbProducts ?? []).map((p) => [p.id, p.price]));
+  for (const item of data.items) {
+    const dbPrice = priceMap.get(item.product_id);
+    // Unknown / deleted / foreign product → reject. Previously this case was
+    // skipped, so a crafted product_id could carry an arbitrary client price
+    // into the order (and mis-fire the stock trigger).
+    if (dbPrice === undefined) {
+      return { error: "Produkt nicht gefunden — bitte Seite neu laden" };
+    }
+    if (Math.abs(dbPrice - item.unit_price) > 0.01) {
+      return { error: "Produktpreis stimmt nicht überein — bitte Seite neu laden" };
     }
   }
 
