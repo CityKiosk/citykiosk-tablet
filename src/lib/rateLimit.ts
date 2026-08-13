@@ -67,3 +67,9 @@ export const createOrderRateLimit = createLimiter(60, 60_000);
  * Keyed on user.id — same reasoning as pinVerifyRateLimit: the threat model
  * is a local attacker on the shared tablet, so IP is meaningless. */
 export const passwordResetRateLimit = createLimiter(5, 60_000);
+
+/** DB keep-alive ping (/api/health/db): 6 per minute per IP.
+ * The endpoint hits Supabase on every call (no cache) and is unauthenticated,
+ * so without a cap it amplifies into a DB/quota DoS. The legitimate caller is a
+ * cron job pinging a few times a day — 6/min is generous. */
+export const healthDbRateLimit = createLimiter(6, 60_000);

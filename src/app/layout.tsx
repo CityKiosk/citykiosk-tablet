@@ -54,8 +54,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" suppressHydrationWarning className={`${firaSans.variable} ${firaCode.variable}`}>
+    <html lang="de" translate="no" suppressHydrationWarning className={`${firaSans.variable} ${firaCode.variable}`}>
       <head>
+        {/* Browser-Übersetzung (z.B. Google Translate) deaktivieren: sie
+            ersetzt DOM-Knoten durch <font>-Wrapper, was React beim Re-Render
+            mit "removeChild: node is not a child" crashen lässt — auf einem
+            geteilten TR-Tablet vor dem Kunden. App ist ohnehin TR+DE zweisprachig. */}
+        <meta name="google" content="notranslate" />
         <script src="/theme-init.js" />
       </head>
       <body className="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased">

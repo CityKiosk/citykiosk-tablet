@@ -33,11 +33,23 @@ export type SignInState = {
 
 function safeNextPath(next: string | undefined): string {
   if (!next) return "/catalog";
-  // Sadece internal path'lere izin ver — open redirect saldırısını önle
-  if (!next.startsWith("/") || next.startsWith("//")) return "/catalog";
-  // Auth path'lerine geri gönderme
-  if (next.startsWith("/login") || next.startsWith("/reset-password")) return "/catalog";
-  return next;
+  // Nur interne Pfade zulassen. Reine startsWith("//")-Prüfung reicht NICHT:
+  // "/\evil.com" beginnt mit "/" und nicht mit "//", wird vom Browser aber als
+  // protokoll-relative URL zu https://evil.com aufgelöst (open redirect). Daher
+  // gegen einen Dummy-Origin auflösen und verlangen, dass der Origin gleich
+  // bleibt — jeder Ausbruch (//, /\, \\, absolute URL) ändert den Origin.
+  let path: string;
+  try {
+    const u = new URL(next, "http://internal.invalid");
+    if (u.origin !== "http://internal.invalid") return "/catalog";
+    path = u.pathname + u.search + u.hash;
+  } catch {
+    return "/catalog";
+  }
+  if (!path.startsWith("/")) return "/catalog";
+  // Nicht zurück auf Auth-Pfade schicken
+  if (path.startsWith("/login") || path.startsWith("/reset-password")) return "/catalog";
+  return path;
 }
 
 export async function signIn(_prev: SignInState, formData: FormData): Promise<SignInState> {

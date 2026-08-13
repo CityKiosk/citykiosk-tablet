@@ -16,9 +16,15 @@
 //   • Path /api/health/* altında olduğu için middleware'de zaten public
 //     (isPublicPath → startsWith '/api/health/'); routing/obscurity mantığına
 //     DOKUNULMADI.
+//   • Rate-limit: IP başına 6/dk (healthDbRateLimit). Auth yok — meşru çağıran
+//     cron; limit DB/quota DoS amplifikasyonunu engeller.
+//   • DB hatasında 503 döner (fail-closed) — uptime check DB'yi yanlışlıkla
+//     sağlıklı görmesin.
 // ============================================================================
 
 import { createClient } from "@supabase/supabase-js";
+import { headers } from "next/headers";
+import { healthDbRateLimit } from "@/lib/rateLimit";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +35,19 @@ export const runtime = "nodejs";
 const SENTINEL_TOKEN = "00000000-0000-0000-0000-000000000000";
 
 export async function GET() {
+  // Rate limit per IP — der Endpoint trifft bei jedem Aufruf die DB und ist
+  // unauthentifiziert, ohne Deckel also ein DoS-Verstärker.
+  const h = await headers();
+  const xff = h.get("x-forwarded-for");
+  const xffParts = xff?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const ip = xffParts.at(-1) || h.get("x-real-ip")?.trim() || "unknown";
+  if (!healthDbRateLimit.check(ip)) {
+    return new Response(JSON.stringify({ status: "rate_limited" }), {
+      status: 429,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
+    });
+  }
+
   let db: "ok" | "error" = "ok";
   try {
     // Stateless anon client (cookie/session yok). unstable_cache'li public
@@ -49,10 +68,16 @@ export async function GET() {
     db = "error";
   }
 
+  // Fail-closed für Monitoring: bei DB-Fehler 503 statt 200, sonst sieht der
+  // Uptime-Check die DB fälschlich als gesund (OWASP A10:2025).
   return new Response(
-    JSON.stringify({ status: "ok", db, time: new Date().toISOString() }),
+    JSON.stringify({
+      status: db === "ok" ? "ok" : "degraded",
+      db,
+      time: new Date().toISOString(),
+    }),
     {
-      status: 200,
+      status: db === "ok" ? 200 : 503,
       headers: {
         "content-type": "application/json",
         "cache-control": "no-store, no-cache, must-revalidate, max-age=0",

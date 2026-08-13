@@ -40,7 +40,11 @@ type ServerCategory = {
 type ServerProduct = {
   id: string;
   name_de: string;
-  price: number;
+  // price/sku/dimensions/packaging_unit/description_de können serverseitig NULL
+  // sein, wenn das Feld im browse-Scope ausgeblendet ist (page.tsx nullt sie,
+  // damit sie nicht in der RSC-Payload landen). Der Render blendet dasselbe Feld
+  // ohnehin per useDisplayFields aus, daher wird ein genulltes Feld nie gezeigt.
+  price: number | null;
   image_url: string | null;
   category_id: string | null;
   dimensions: string | null;
@@ -197,7 +201,9 @@ function PageGrid({ items, catById }: { items: ServerProduct[]; catById: Map<str
               id: p.id,
               image: p.image_url || "",
               categoryId: p.category_id || "",
-              price: p.price,
+              // NULL (Feld ausgeblendet) → 0; der Render zeigt den Preis dann
+              // ohnehin nicht (fields.price ist false). Kein sichtbarer 0-Preis.
+              price: p.price ?? 0,
               sku: p.sku || undefined,
               dim: p.dimensions || undefined,
               description: p.description_de || undefined,
