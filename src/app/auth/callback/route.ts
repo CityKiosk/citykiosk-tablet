@@ -11,11 +11,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNextPath } from "@/lib/safeNextPath";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/catalog";
+  const next = searchParams.get("next");
 
   // Behind Render's proxy, request.url's origin can resolve to the internal
   // host (localhost:10000). Use NEXT_PUBLIC_SITE_URL as the public origin.
@@ -33,8 +34,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/login?error=auth_callback_failed`);
   }
 
-  // Safe redirect — only allow internal paths
-  const safeNext =
-    next.startsWith("/") && !next.startsWith("//") ? next : "/catalog";
-  return NextResponse.redirect(`${baseUrl}${safeNext}`);
+  // Safe redirect — same hardened check as the login action (K5: one helper,
+  // no drifting copies). Auth pages are allowed here: the password-reset
+  // e-mail lands on ?next=/reset-password/confirm.
+  return NextResponse.redirect(`${baseUrl}${safeNextPath(next, { allowAuthPages: true })}`);
 }

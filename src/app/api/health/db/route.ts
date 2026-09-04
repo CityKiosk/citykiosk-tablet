@@ -16,15 +16,19 @@
 //   • Path /api/health/* altında olduğu için middleware'de zaten public
 //     (isPublicPath → startsWith '/api/health/'); routing/obscurity mantığına
 //     DOKUNULMADI.
-//   • Rate-limit: IP başına 6/dk (healthDbRateLimit). Auth yok — meşru çağıran
-//     cron; limit DB/quota DoS amplifikasyonunu engeller.
+//   • Rate-limit: IP başına 6/dk (healthDbRateLimit) + global 30/dk
+//     (healthDbGlobalRateLimit — IP başlığı spoof edilebilir, global tavan
+//     edilemez). Auth yok — meşru çağıran cron; limit DB/quota DoS
+//     amplifikasyonunu engeller. Bilinçli trade-off: 5+ gerçek IP'den sürekli
+//     yük global tavanı doldurup UptimeRobot'a 429 gösterebilir (yanlış
+//     'down' alarmı) — DB'yi korumak alarmdan önemli.
 //   • DB hatasında 503 döner (fail-closed) — uptime check DB'yi yanlışlıkla
 //     sağlıklı görmesin.
 // ============================================================================
 
 import { createClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
-import { getClientIp, healthDbRateLimit } from "@/lib/rateLimit";
+import { getClientIp, healthDbGlobalRateLimit, healthDbRateLimit } from "@/lib/rateLimit";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +42,12 @@ export async function GET() {
   // Rate limit per IP — der Endpoint trifft bei jedem Aufruf die DB und ist
   // unauthentifiziert, ohne Deckel also ein DoS-Verstärker.
   const ip = getClientIp(await headers());
-  if (!healthDbRateLimit.check(ip)) {
+  // Per-IP AND global: the IP key can be spoofed via headers (see getClientIp),
+  // the global cap cannot.
+  if (!healthDbRateLimit.check(ip) || !healthDbGlobalRateLimit.check("global")) {
     return new Response(JSON.stringify({ status: "rate_limited" }), {
       status: 429,
-      headers: { "content-type": "application/json", "cache-control": "no-store" },
+      headers: { "content-type": "application/json", "cache-control": "no-store", "retry-after": "60" },
     });
   }
 

@@ -8,7 +8,8 @@
 //
 // Security:
 //   - Input validation via Zod
-//   - Rate limiting via Supabase built-in (30 attempts / 5 min per IP default)
+//   - Rate limiting: in-memory per client IP AND per target e-mail, plus
+//     Supabase Auth's own limits
 //   - No specific error info leaked (always "ungültig" / "invalid credentials")
 //   - `next` param validated to prevent open-redirect attacks
 // ============================================================================
@@ -17,7 +18,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { z } from "zod";
-import { getClientIp, loginRateLimit } from "@/lib/rateLimit";
+import { getClientIp, loginEmailRateLimit, loginRateLimit } from "@/lib/rateLimit";
+import { safeNextPath } from "@/lib/safeNextPath";
 import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE } from "@/lib/session";
 
 const SignInSchema = z.object({
@@ -31,31 +33,11 @@ export type SignInState = {
   fieldErrors?: { email?: string[]; password?: string[] };
 };
 
-function safeNextPath(next: string | undefined): string {
-  if (!next) return "/catalog";
-  // Nur interne Pfade zulassen. Reine startsWith("//")-Prüfung reicht NICHT:
-  // "/\evil.com" beginnt mit "/" und nicht mit "//", wird vom Browser aber als
-  // protokoll-relative URL zu https://evil.com aufgelöst (open redirect). Daher
-  // gegen einen Dummy-Origin auflösen und verlangen, dass der Origin gleich
-  // bleibt — jeder Ausbruch (//, /\, \\, absolute URL) ändert den Origin.
-  let path: string;
-  try {
-    const u = new URL(next, "http://internal.invalid");
-    if (u.origin !== "http://internal.invalid") return "/catalog";
-    path = u.pathname + u.search + u.hash;
-  } catch {
-    return "/catalog";
-  }
-  if (!path.startsWith("/")) return "/catalog";
-  // Nicht zurück auf Auth-Pfade schicken
-  if (path.startsWith("/login") || path.startsWith("/reset-password")) return "/catalog";
-  return path;
-}
 
 export async function signIn(_prev: SignInState, formData: FormData): Promise<SignInState> {
-  // Rate limit by IP (in-memory, works on Render persistent process).
-  // IP derivation lives in getClientIp — see the note there on why the FIRST
-  // X-Forwarded-For element is the trustworthy one on Render.
+  // Rate limit by IP (in-memory, works on Render persistent process). IP
+  // derivation lives in getClientIp — see the note there on which headers are
+  // trustworthy behind Render/Cloudflare.
   const ip = getClientIp(await headers());
   if (!loginRateLimit.check(ip)) {
     return { error: "Zu viele Versuche. Bitte warten. / Çok fazla deneme. Lütfen bekleyin." };
@@ -73,6 +55,15 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
     };
   }
 
+  // Second key: FAILED attempts against the TARGET account. IP keys can be
+  // rotated or spoofed; the account name cannot. Only failures count and a
+  // successful login clears the bucket, so this cannot be used to lock the
+  // owner out (see loginEmailRateLimit).
+  const emailKey = parsed.data.email.trim().toLowerCase();
+  if (loginEmailRateLimit.isLimited(emailKey)) {
+    return { error: "Zu viele Versuche. Bitte warten. / Çok fazla deneme. Lütfen bekleyin." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
@@ -80,11 +71,13 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
   });
 
   if (error) {
+    loginEmailRateLimit.hit(emailKey);
     // Specific error info sızdırma — her zaman generic mesaj
     return {
       error: "Ungültige Anmeldedaten / Geçersiz giriş bilgileri",
     };
   }
+  loginEmailRateLimit.reset(emailKey);
 
   // Concurrent-login limit: at most 6 active device sessions. register_session
   // atomically reaps stale rows, counts, and inserts a slot — or returns false

@@ -343,8 +343,11 @@ export async function verifyPin(pin: string, scope: PinScope): Promise<{ success
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthenticated" };
 
-  // Per-scope rate bucket so a Lager-PIN brute force can't lock the owner
-  // out of /settings (and vice versa).
+  // Per-scope APP-layer bucket (in-memory). Note: the DB-side lockout in
+  // verify_admin_pin / set_admin_pin / remove_admin_pin (migrations 20260814,
+  // 20260904) is one counter per profile across ALL scopes — 10 wrong entries
+  // anywhere lock every PIN operation for 15 min. That is the real barrier;
+  // this bucket only spares the DB some bcrypt work.
   if (!pinVerifyRateLimit.check(`${user.id}:${scope}`)) {
     return { error: "rate_limited" };
   }
