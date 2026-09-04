@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { z } from "zod";
-import { loginRateLimit } from "@/lib/rateLimit";
+import { getClientIp, loginRateLimit } from "@/lib/rateLimit";
 import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE } from "@/lib/session";
 
 const SignInSchema = z.object({
@@ -54,12 +54,9 @@ function safeNextPath(next: string | undefined): string {
 
 export async function signIn(_prev: SignInState, formData: FormData): Promise<SignInState> {
   // Rate limit by IP (in-memory, works on Render persistent process).
-  // X-Forwarded-For is "client, proxy1, proxy2, ..."; the trustworthy entry
-  // is the LAST hop (Render's edge), not the first (which the client controls).
-  const h = await headers();
-  const xff = h.get("x-forwarded-for");
-  const xffParts = xff?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-  const ip = xffParts.at(-1) || h.get("x-real-ip")?.trim() || "unknown";
+  // IP derivation lives in getClientIp — see the note there on why the FIRST
+  // X-Forwarded-For element is the trustworthy one on Render.
+  const ip = getClientIp(await headers());
   if (!loginRateLimit.check(ip)) {
     return { error: "Zu viele Versuche. Bitte warten. / Çok fazla deneme. Lütfen bekleyin." };
   }

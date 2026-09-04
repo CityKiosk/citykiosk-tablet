@@ -24,7 +24,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
-import { healthDbRateLimit } from "@/lib/rateLimit";
+import { getClientIp, healthDbRateLimit } from "@/lib/rateLimit";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +37,7 @@ const SENTINEL_TOKEN = "00000000-0000-0000-0000-000000000000";
 export async function GET() {
   // Rate limit per IP — der Endpoint trifft bei jedem Aufruf die DB und ist
   // unauthentifiziert, ohne Deckel also ein DoS-Verstärker.
-  const h = await headers();
-  const xff = h.get("x-forwarded-for");
-  const xffParts = xff?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-  const ip = xffParts.at(-1) || h.get("x-real-ip")?.trim() || "unknown";
+  const ip = getClientIp(await headers());
   if (!healthDbRateLimit.check(ip)) {
     return new Response(JSON.stringify({ status: "rate_limited" }), {
       status: 429,

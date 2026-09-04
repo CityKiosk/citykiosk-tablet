@@ -68,6 +68,21 @@ export const createOrderRateLimit = createLimiter(60, 60_000);
  * is a local attacker on the shared tablet, so IP is meaningless. */
 export const passwordResetRateLimit = createLimiter(5, 60_000);
 
+/** Client IP behind Render's proxy chain, for IP-keyed limiters.
+ *
+ * Render (fronted by Cloudflare) RESETS X-Forwarded-For and writes the real
+ * client IP as the FIRST element, so the first element cannot be spoofed by
+ * the client. Every later element is a Cloudflare/Render hop whose address
+ * changes from connection to connection. Keying on the LAST element therefore
+ * gave each new connection its own bucket and the limiters never fired in
+ * production (verified live 2026-09-04: 27 separate requests → 0×429, while a
+ * single reused connection hit 429 at request 7). */
+export function getClientIp(h: { get(name: string): string | null }): string {
+  const xff = h.get("x-forwarded-for");
+  const first = xff?.split(",").map((s) => s.trim()).find(Boolean);
+  return first || h.get("x-real-ip")?.trim() || "unknown";
+}
+
 /** DB keep-alive ping (/api/health/db): 6 per minute per IP.
  * The endpoint hits Supabase on every call (no cache) and is unauthenticated,
  * so without a cap it amplifies into a DB/quota DoS. The legitimate caller is a
