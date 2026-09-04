@@ -17,6 +17,7 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { publicCatalogRateLimit } from "@/lib/rateLimit";
 
 // Stateless anon client — no cookies, no session. The public catalog RPC is
 // SECURITY DEFINER and granted to `anon`, so user context is irrelevant.
@@ -46,6 +47,13 @@ export type PublicDisplayFields = PublicCatalogPayload["display_fields"];
 export async function getPublicCatalog(token: string): Promise<PublicCatalogPayload | null> {
   const fetcher = unstable_cache(
     async (t: string): Promise<PublicCatalogPayload | null> => {
+      // This body only runs on a cache MISS. Global cap on misses bounds the
+      // RPC amplification of distinct-token fuzzing. THROW (don't return null)
+      // so unstable_cache does not memoise a rate-limited empty for this token
+      // — the outer catch turns it into a normal not-found.
+      if (!publicCatalogRateLimit.check("global")) {
+        throw new Error("public_catalog_rate_limited");
+      }
       const { data, error } = await publicClient.rpc("get_public_catalog", {
         share_token: t,
       });
@@ -62,5 +70,10 @@ export async function getPublicCatalog(token: string): Promise<PublicCatalogPayl
       tags: [`public-catalog:${token}`],
     },
   );
-  return fetcher(token);
+  try {
+    return await fetcher(token);
+  } catch {
+    // Rate-limited miss (or transient error) → behave like an unknown token.
+    return null;
+  }
 }

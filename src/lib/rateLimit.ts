@@ -135,3 +135,13 @@ export const healthDbRateLimit = createLimiter(6, 60_000);
  * limit above is spoofable via headers, this one is keyed on nothing the
  * client controls. */
 export const healthDbGlobalRateLimit = createLimiter(30, 60_000);
+
+/** Public catalog RPC (/v/[token]) cache-MISS cap: 60 per minute GLOBALLY.
+ * A cache hit (same token within 60 s) never reaches this — only misses, i.e.
+ * new/expired tokens, run the fetcher and count. Bounds the DoS amplification
+ * of fuzzing many distinct random tokens (each a miss → 1 RPC + 1 render).
+ * Global key (not per-IP): the fetcher runs inside unstable_cache and must not
+ * read request headers. Note: a direct POST /rest/v1/rpc/get_public_catalog
+ * bypasses this route entirely — that residual is bounded only by Supabase's
+ * own PostgREST/connection limits. */
+export const publicCatalogRateLimit = createLimiter(60, 60_000);

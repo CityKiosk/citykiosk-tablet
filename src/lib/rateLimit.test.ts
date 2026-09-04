@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { getClientIp, healthDbGlobalRateLimit, healthDbRateLimit, loginEmailRateLimit } from "./rateLimit";
+import { getClientIp, healthDbGlobalRateLimit, healthDbRateLimit, loginEmailRateLimit, publicCatalogRateLimit } from "./rateLimit";
 
 function headersOf(map: Record<string, string>) {
   return { get: (name: string) => map[name.toLowerCase()] ?? null };
@@ -72,6 +72,20 @@ describe("loginEmailRateLimit (failures only, 10 per 10 minutes per e-mail)", ()
       expect(loginEmailRateLimit.isLimited(key)).toBe(true);
       vi.advanceTimersByTime(10 * 60_000 + 1);
       expect(loginEmailRateLimit.isLimited(key)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("publicCatalogRateLimit (60 per minute, global)", () => {
+  it("allows 60 misses then blocks the 61st on the shared global key", () => {
+    vi.useFakeTimers();
+    try {
+      for (let i = 0; i < 60; i++) expect(publicCatalogRateLimit.check("global")).toBe(true);
+      expect(publicCatalogRateLimit.check("global")).toBe(false);
+      vi.advanceTimersByTime(60_001);
+      expect(publicCatalogRateLimit.check("global")).toBe(true);
     } finally {
       vi.useRealTimers();
     }
