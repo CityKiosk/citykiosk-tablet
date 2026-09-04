@@ -19,7 +19,8 @@ import LegalPage, { LEGAL_PAGE_COUNT } from "@/components/LegalPage";
 import { useDisplayFields } from "@/components/DisplayFieldsProvider";
 import { PackageIcon, ChevronRightIcon, XIcon, ShareIcon, MenuIcon } from "@/components/icons";
 import { useToast } from "@/components/Toast";
-import { getOrCreateShareLink } from "./actions";
+import { revokeShareLink } from "./actions";
+import ShareLinkPinDialog from "./ShareLinkPinDialog";
 import { QRCodeSVG } from "qrcode.react";
 import Link from "next/link";
 
@@ -221,7 +222,8 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
   const { t } = useI18n();
   const toast = useToast();
   const [currentPage, setCurrentPage] = useState(0);
-  const [sharing, setSharing] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [revoking, setRevoking] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -342,19 +344,7 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
       <div className="flex-shrink-0 flex items-center justify-end gap-2 pb-2">
         <button
           type="button"
-          disabled={sharing}
-          onClick={async () => {
-            setSharing(true);
-            try {
-              const result = await getOrCreateShareLink();
-              if (result.error) { toast.show(result.error); return; }
-              setShareUrl(`${window.location.origin}/v/${result.token}`);
-            } catch {
-              toast.show("Fehler beim Teilen");
-            } finally {
-              setSharing(false);
-            }
-          }}
+          onClick={() => setPinDialogOpen(true)}
           className="cursor-pointer w-10 h-10 inline-flex items-center justify-center rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 disabled:opacity-60"
           aria-label="Katalog-Link teilen"
         >
@@ -491,6 +481,13 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
       )}
 
       {/* QR Code + Link Share Modal */}
+      {pinDialogOpen && (
+        <ShareLinkPinDialog
+          onClose={() => setPinDialogOpen(false)}
+          onReady={(url) => { setShareUrl(url); setPinDialogOpen(false); }}
+        />
+      )}
+
       {shareUrl && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -526,6 +523,26 @@ export function BrowseCatalogClient({ categories, products }: { categories: Serv
               className="cursor-pointer w-full h-11 rounded-lg text-sm font-semibold text-white bg-sky-700 hover:bg-sky-800 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60 transition-colors"
             >
               Link kopieren
+            </button>
+            <button
+              type="button"
+              disabled={revoking}
+              onClick={async () => {
+                setRevoking(true);
+                try {
+                  const res = await revokeShareLink();
+                  if (res.error) { toast.show(res.error); return; }
+                  toast.show(t.browse.share.revoked);
+                  setShareUrl(null);
+                } catch {
+                  toast.show(t.pin.saveError);
+                } finally {
+                  setRevoking(false);
+                }
+              }}
+              className="cursor-pointer mt-2 w-full h-11 rounded-lg text-sm font-semibold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 transition-colors disabled:opacity-60"
+            >
+              {t.browse.share.revoke}
             </button>
           </div>
         </div>

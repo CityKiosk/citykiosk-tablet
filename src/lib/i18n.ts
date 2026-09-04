@@ -215,6 +215,11 @@ type LocaleDict = {
     uncategorized: string;
     categoryEyebrow: string;
     productCount: (n: number) => string;
+    share: {
+      revoke: string;
+      revoked: string;
+      pinRequired: string;
+    };
   };
   add2: {
     dimensions: string;
@@ -611,6 +616,11 @@ export const dict: Record<Locale, LocaleDict> = {
       uncategorized: "Sonstige",
       categoryEyebrow: "Kategorie",
       productCount: (n: number) => `${n} ${n === 1 ? "Produkt" : "Produkte"}`,
+      share: {
+        revoke: "Link widerrufen",
+        revoked: "Link widerrufen — der öffentliche Katalog ist jetzt ungültig.",
+        pinRequired: "Einstellungs-PIN erforderlich, um zu teilen.",
+      },
     },
     add2: {
       dimensions: "Maße",
